@@ -15,8 +15,8 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 const FormSchema = z.object({
-  email: z.string().email({ message: "Please enter a valid email address." }),
-  password: z.string().min(6, { message: "Password must be at least 6 characters." }),
+  email: z.string().email({ message: "Por favor ingresa un correo electrónico válido." }),
+  password: z.string().min(6, { message: "La contraseña debe tener al menos 6 caracteres." }),
   remember: z.boolean().optional(),
 });
 
@@ -65,9 +65,9 @@ export function LoginForm() {
           name="email"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Email Address</FormLabel>
+              <FormLabel>Correo Electrónico</FormLabel>
               <FormControl>
-                <Input id="email" type="email" placeholder="you@example.com" autoComplete="email" {...field} />
+                <Input id="email" type="email" placeholder="tu@ejemplo.com" autoComplete="email" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -78,7 +78,7 @@ export function LoginForm() {
           name="password"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Password</FormLabel>
+              <FormLabel>Contraseña</FormLabel>
               <FormControl>
                 <Input
                   id="password"
@@ -106,13 +106,13 @@ export function LoginForm() {
                 />
               </FormControl>
               <FormLabel htmlFor="login-remember" className="ml-1 font-medium text-muted-foreground text-sm">
-                Remember me for 30 days
+                Recordarme por 30 días
               </FormLabel>
             </FormItem>
           )}
         />
         <Button className="w-full" type="submit" disabled={loading}>
-          {loading ? "Iniciando sesión..." : "Login"}
+          {loading ? "Iniciando sesión..." : "Ingresar"}
         </Button>
       </form>
     </Form>

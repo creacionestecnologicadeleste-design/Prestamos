@@ -53,6 +53,7 @@ export default function CrearClientePage() {
             ),
         },
         {
+            accessorKey: "firstName",
             header: "Cliente",
             cell: ({ row }) => (
                 <div className="flex flex-col">
@@ -87,6 +88,8 @@ export default function CrearClientePage() {
     const table = useDataTableInstance({
         data: clients,
         columns,
+        defaultPageSize: 5,
+        defaultSorting: [{ id: "firstName", desc: false }],
         getRowId: (row) => row.id,
     });
 

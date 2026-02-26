@@ -18,6 +18,8 @@ import { arrayMove, SortableContext, verticalListSortingStrategy } from "@dnd-ki
 import { type ColumnDef, flexRender, type Table as TanStackTable } from "@tanstack/react-table";
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
+import { Search } from "lucide-react";
 
 import { DraggableRow } from "./draggable-row";
 
@@ -26,6 +28,7 @@ interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   dndEnabled?: boolean;
   isLoading?: boolean;
+  searchPlaceholder?: string;
   onReorder?: (newData: TData[]) => void;
   onRowClick?: (row: any) => void;
 }
@@ -95,6 +98,7 @@ export function DataTable<TData, TValue>({
   columns,
   dndEnabled = false,
   isLoading = false,
+  searchPlaceholder = "Buscar...",
   onReorder,
   onRowClick,
 }: DataTableProps<TData, TValue>) {
@@ -115,24 +119,37 @@ export function DataTable<TData, TValue>({
   }
 
   const tableContent = (
-    <Table>
-      <TableHeader className="sticky top-0 z-10 bg-muted">
-        {table.getHeaderGroups().map((headerGroup) => (
-          <TableRow key={headerGroup.id}>
-            {headerGroup.headers.map((header) => {
-              return (
-                <TableHead key={header.id} colSpan={header.colSpan}>
-                  {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
-                </TableHead>
-              );
-            })}
-          </TableRow>
-        ))}
-      </TableHeader>
-      <TableBody className="**:data-[slot=table-cell]:first:w-8">
-        {renderTableBody({ table, columns, dndEnabled, dataIds, isLoading, onRowClick })}
-      </TableBody>
-    </Table>
+    <div className="space-y-4">
+      <div className="flex items-center gap-2 max-w-sm ml-auto mr-4 mt-4">
+        <div className="relative w-full">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder={searchPlaceholder}
+            value={(table.getState().globalFilter as string) ?? ""}
+            onChange={(event) => table.setGlobalFilter(event.target.value)}
+            className="pl-9 bg-background"
+          />
+        </div>
+      </div>
+      <Table>
+        <TableHeader className="sticky top-0 z-10 bg-muted">
+          {table.getHeaderGroups().map((headerGroup) => (
+            <TableRow key={headerGroup.id}>
+              {headerGroup.headers.map((header) => {
+                return (
+                  <TableHead key={header.id} colSpan={header.colSpan}>
+                    {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                  </TableHead>
+                );
+              })}
+            </TableRow>
+          ))}
+        </TableHeader>
+        <TableBody className="**:data-[slot=table-cell]:first:w-8">
+          {renderTableBody({ table, columns, dndEnabled, dataIds, isLoading, onRowClick })}
+        </TableBody>
+      </Table>
+    </div>
   );
 
   if (dndEnabled) {

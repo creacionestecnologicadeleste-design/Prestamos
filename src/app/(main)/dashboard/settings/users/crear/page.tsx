@@ -389,7 +389,9 @@ export default function UserManagementPage() {
 
     const table = useDataTableInstance({
         data: filteredUsers,
-        columns,
+        columns: columns,
+        defaultPageSize: 10,
+        defaultSorting: [{ id: "name", desc: false }],
         getRowId: (row) => row.id,
     });
 

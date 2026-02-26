@@ -1,5 +1,6 @@
 import * as React from "react";
 import { CircleUser, CreditCard, EllipsisVertical, LogOut, MessageSquareDot } from "lucide-react";
+import { useSession, signOut } from "next-auth/react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -14,23 +15,18 @@ import {
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
 import { getInitials } from "@/lib/utils";
 
-export function NavUser({
-  user,
-}: {
-  readonly user: {
-    readonly name: string;
-    readonly email: string;
-    readonly avatar: string;
-  };
-}) {
+export function NavUser() {
+  const { data: session } = useSession();
   const [mounted, setMounted] = React.useState(false);
   const { isMobile } = useSidebar();
+
+  const user = session?.user;
 
   React.useEffect(() => {
     setMounted(true);
   }, []);
 
-  if (!mounted) return null;
+  if (!mounted || !user) return null;
 
   return (
     <SidebarMenu>
@@ -41,9 +37,9 @@ export function NavUser({
               size="lg"
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
-              <Avatar className="h-8 w-8 rounded-lg grayscale">
-                <AvatarImage src={user.avatar || undefined} alt={user.name} />
-                <AvatarFallback className="rounded-lg">{getInitials(user.name)}</AvatarFallback>
+              <Avatar className="h-8 w-8 rounded-lg">
+                <AvatarImage src={user.image || undefined} alt={user.name || ""} />
+                <AvatarFallback className="rounded-lg">{getInitials(user.name || "U")}</AvatarFallback>
               </Avatar>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-medium">{user.name}</span>
@@ -61,8 +57,8 @@ export function NavUser({
             <DropdownMenuLabel className="p-0 font-normal">
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                 <Avatar className="h-8 w-8 rounded-lg">
-                  <AvatarImage src={user.avatar || undefined} alt={user.name} />
-                  <AvatarFallback className="rounded-lg">{getInitials(user.name)}</AvatarFallback>
+                  <AvatarImage src={user.image || undefined} alt={user.name || ""} />
+                  <AvatarFallback className="rounded-lg">{getInitials(user.name || "U")}</AvatarFallback>
                 </Avatar>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-medium">{user.name}</span>
@@ -73,22 +69,25 @@ export function NavUser({
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
               <DropdownMenuItem>
-                <CircleUser />
-                Account
+                <CircleUser className="size-4" />
+                Cuenta
               </DropdownMenuItem>
               <DropdownMenuItem>
-                <CreditCard />
-                Billing
+                <CreditCard className="size-4" />
+                Nomina
               </DropdownMenuItem>
               <DropdownMenuItem>
-                <MessageSquareDot />
-                Notifications
+                <MessageSquareDot className="size-4" />
+                Notificaciones
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
-              <LogOut />
-              Log out
+            <DropdownMenuItem
+              onClick={() => signOut({ callbackUrl: "/auth/v2/login" })}
+              className="text-destructive focus:text-destructive"
+            >
+              <LogOut className="size-4" />
+              Salir
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

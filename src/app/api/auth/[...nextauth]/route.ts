@@ -28,7 +28,8 @@ export const authOptions: any = {
                         id: user.id,
                         name: user.name,
                         email: user.email,
-                        role: user.role,
+                        image: user.imageUrl,
+                        role: user.roleId,
                     };
                 }
 
@@ -41,6 +42,7 @@ export const authOptions: any = {
             if (user) {
                 token.id = user.id;
                 token.role = (user as any).role;
+                token.image = (user as any).image;
             }
             return token;
         },
@@ -48,6 +50,7 @@ export const authOptions: any = {
             if (session.user) {
                 (session.user as any).id = token.id;
                 (session.user as any).role = token.role;
+                session.user.image = token.image as string;
             }
             return session;
         },

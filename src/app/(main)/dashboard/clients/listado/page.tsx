@@ -226,6 +226,8 @@ export default function ListadoClientesPage() {
     const table = useDataTableInstance({
         data: clients || [],
         columns: listColumns,
+        defaultPageSize: 10,
+        defaultSorting: [{ id: "fullName", desc: false }],
         getRowId: (row) => row.id,
     });
 
