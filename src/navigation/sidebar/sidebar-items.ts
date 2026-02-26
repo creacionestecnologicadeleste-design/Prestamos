@@ -16,6 +16,7 @@ import {
   ShoppingBag,
   SquareArrowUpRight,
   Users,
+  Vault,
 } from "lucide-react";
 
 export interface NavSubItem {
@@ -73,6 +74,12 @@ export const sidebarItems: NavGroup[] = [
         title: "Pagos",
         url: "/dashboard/payments",
         icon: ReceiptText,
+      },
+      {
+        title: "Cajas",
+        url: "/dashboard/cajas",
+        icon: Vault,
+        isNew: true,
       },
     ],
   },

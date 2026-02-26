@@ -8,6 +8,9 @@ export const loanMethodEnum = pgEnum('loan_method', ['french', 'german']);
 export const loanStatusEnum = pgEnum('loan_status', ['pending', 'approved', 'active', 'paid', 'rejected', 'defaulted']);
 export const scheduleStatusEnum = pgEnum('schedule_status', ['pending', 'paid', 'overdue', 'partial']);
 export const paymentMethodEnum = pgEnum('payment_method', ['cash', 'transfer', 'card']);
+export const cajaTypeEnum = pgEnum('caja_type', ['principal', 'chica']);
+export const sessionStatusEnum = pgEnum('session_status', ['abierta', 'cerrada']);
+export const movementTypeEnum = pgEnum('movement_type', ['ingreso', 'gasto', 'traspaso_entrada', 'traspaso_salida', 'ajuste_sobrante', 'ajuste_faltante']);
 
 // Users
 export const users = pgTable('users', {
@@ -97,12 +100,53 @@ export const penalties = pgTable('penalties', {
     createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
+// Cajas
+export const cajas = pgTable('cajas', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    nombre: varchar('nombre', { length: 255 }).notNull(),
+    tipo: cajaTypeEnum('tipo').notNull(),
+    saldoActual: decimal('saldo_actual', { precision: 12, scale: 2 }).default('0').notNull(),
+    cuentaContable: varchar('cuenta_contable', { length: 100 }),
+    limiteMaximo: decimal('limite_maximo', { precision: 12, scale: 2 }),
+    isActive: boolean('is_active').default(true).notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+// Sesiones de Caja
+export const sesionesCaja = pgTable('sesiones_caja', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    cajaId: uuid('caja_id').references(() => cajas.id).notNull(),
+    userId: uuid('user_id').references(() => users.id).notNull(),
+    montoApertura: decimal('monto_apertura', { precision: 12, scale: 2 }).notNull(),
+    montoCierre: decimal('monto_cierre', { precision: 12, scale: 2 }),
+    saldoEsperado: decimal('saldo_esperado', { precision: 12, scale: 2 }),
+    discrepancia: decimal('discrepancia', { precision: 12, scale: 2 }),
+    estado: sessionStatusEnum('estado').default('abierta').notNull(),
+    openedAt: timestamp('opened_at').defaultNow().notNull(),
+    closedAt: timestamp('closed_at'),
+});
+
+// Movimientos de Caja
+export const movimientosCaja = pgTable('movimientos_caja', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    sesionId: uuid('sesion_id').references(() => sesionesCaja.id).notNull(),
+    cajaId: uuid('caja_id').references(() => cajas.id).notNull(),
+    tipo: movementTypeEnum('tipo').notNull(),
+    monto: decimal('monto', { precision: 12, scale: 2 }).notNull(),
+    concepto: varchar('concepto', { length: 500 }).notNull(),
+    referencia: varchar('referencia', { length: 100 }),
+    createdBy: uuid('created_by').references(() => users.id),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
     clientsCreated: many(clients),
     loansApproved: many(loans, { relationName: 'approvedBy' }),
     loansCreated: many(loans, { relationName: 'createdBy' }),
     paymentsReceived: many(payments),
+    sesionesCaja: many(sesionesCaja),
+    movimientosCaja: many(movimientosCaja),
 }));
 
 export const clientsRelations = relations(clients, ({ one, many }) => ({
@@ -134,4 +178,22 @@ export const paymentsRelations = relations(payments, ({ one }) => ({
 export const penaltiesRelations = relations(penalties, ({ one }) => ({
     loan: one(loans, { fields: [penalties.loanId], references: [loans.id] }),
     schedule: one(amortizationSchedule, { fields: [penalties.scheduleId], references: [amortizationSchedule.id] }),
+}));
+
+// Cajas Relations
+export const cajasRelations = relations(cajas, ({ many }) => ({
+    sesiones: many(sesionesCaja),
+    movimientos: many(movimientosCaja),
+}));
+
+export const sesionesCajaRelations = relations(sesionesCaja, ({ one, many }) => ({
+    caja: one(cajas, { fields: [sesionesCaja.cajaId], references: [cajas.id] }),
+    user: one(users, { fields: [sesionesCaja.userId], references: [users.id] }),
+    movimientos: many(movimientosCaja),
+}));
+
+export const movimientosCajaRelations = relations(movimientosCaja, ({ one }) => ({
+    sesion: one(sesionesCaja, { fields: [movimientosCaja.sesionId], references: [sesionesCaja.id] }),
+    caja: one(cajas, { fields: [movimientosCaja.cajaId], references: [cajas.id] }),
+    creator: one(users, { fields: [movimientosCaja.createdBy], references: [users.id] }),
 }));
