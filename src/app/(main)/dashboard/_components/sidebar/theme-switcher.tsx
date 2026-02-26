@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import { Monitor, Moon, Sun } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -9,8 +10,21 @@ import { usePreferencesStore } from "@/stores/preferences/preferences-provider";
 const THEME_CYCLE = ["light", "dark", "system"] as const;
 
 export function ThemeSwitcher() {
+  const [mounted, setMounted] = React.useState(false);
   const themeMode = usePreferencesStore((s) => s.themeMode);
   const setThemeMode = usePreferencesStore((s) => s.setThemeMode);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return (
+      <Button size="icon" disabled>
+        <Monitor className="opacity-50" />
+      </Button>
+    );
+  }
 
   const cycleTheme = () => {
     const currentIndex = THEME_CYCLE.indexOf(themeMode);

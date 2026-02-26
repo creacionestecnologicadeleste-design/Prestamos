@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import { Settings } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,7 @@ import { applyThemePreset } from "@/lib/preferences/theme-utils";
 import { usePreferencesStore } from "@/stores/preferences/preferences-provider";
 
 export function LayoutControls() {
+  const [mounted, setMounted] = React.useState(false);
   const themeMode = usePreferencesStore((s) => s.themeMode);
   const resolvedThemeMode = usePreferencesStore((s) => s.resolvedThemeMode);
   const setThemeMode = usePreferencesStore((s) => s.setThemeMode);
@@ -38,6 +40,10 @@ export function LayoutControls() {
   const setSidebarCollapsible = usePreferencesStore((s) => s.setSidebarCollapsible);
   const font = usePreferencesStore((s) => s.font);
   const setFont = usePreferencesStore((s) => s.setFont);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const onThemePresetChange = async (preset: ThemePreset) => {
     applyThemePreset(preset);
@@ -96,12 +102,18 @@ export function LayoutControls() {
     onFontChange(PREFERENCE_DEFAULTS.font);
   };
 
+  const trigger = (
+    <Button size="icon">
+      <Settings />
+    </Button>
+  );
+
+  if (!mounted) return trigger;
+
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button size="icon">
-          <Settings />
-        </Button>
+        {trigger}
       </PopoverTrigger>
       <PopoverContent align="end">
         <div className="flex flex-col gap-5">

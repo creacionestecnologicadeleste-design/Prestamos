@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { sesionesCaja, cajas } from '@/lib/db/schema';
+import { sesionesCaja, cajas, users } from '@/lib/db/schema';
 import { openSessionSchema } from '@/lib/validations/sesion-caja.schema';
 import { eq, and } from 'drizzle-orm';
 
@@ -27,59 +27,60 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         const json = await request.json();
         const validatedData = openSessionSchema.parse({ ...json, cajaId: id });
 
-        const result = await db.transaction(async (tx) => {
-            // Check if the caja exists and is active
-            const caja = await tx.query.cajas.findFirst({
-                where: and(eq(cajas.id, id), eq(cajas.isActive, true)),
+        // Get userId from body, or fallback to first active user
+        let userId = json.userId;
+        if (!userId) {
+            const firstUser = await db.query.users.findFirst({
+                where: eq(users.isActive, true),
             });
+            userId = firstUser?.id;
+        }
 
-            if (!caja) {
-                throw new Error('CAJA_NOT_FOUND');
-            }
+        if (!userId) {
+            return NextResponse.json({ error: 'No se encontró usuario' }, { status: 400 });
+        }
 
-            // Check if there's already an open session for this caja
-            const existingSession = await tx.query.sesionesCaja.findFirst({
-                where: and(
-                    eq(sesionesCaja.cajaId, id),
-                    eq(sesionesCaja.estado, 'abierta'),
-                ),
-            });
-
-            if (existingSession) {
-                throw new Error('SESSION_ALREADY_OPEN');
-            }
-
-            // Create new session
-            const [newSession] = await tx
-                .insert(sesionesCaja)
-                .values({
-                    cajaId: id,
-                    userId: json.userId, // TODO: Get from auth session
-                    montoApertura: validatedData.montoApertura.toString(),
-                })
-                .returning();
-
-            // Update caja saldo to the opening amount
-            await tx
-                .update(cajas)
-                .set({ saldoActual: validatedData.montoApertura.toString() })
-                .where(eq(cajas.id, id));
-
-            return newSession;
+        // Check if the caja exists and is active
+        const caja = await db.query.cajas.findFirst({
+            where: and(eq(cajas.id, id), eq(cajas.isActive, true)),
         });
 
-        return NextResponse.json(result, { status: 201 });
+        if (!caja) {
+            return NextResponse.json({ error: 'Caja no encontrada o inactiva' }, { status: 404 });
+        }
+
+        // Check if there's already an open session for this caja
+        const existingSession = await db.query.sesionesCaja.findFirst({
+            where: and(
+                eq(sesionesCaja.cajaId, id),
+                eq(sesionesCaja.estado, 'abierta'),
+            ),
+        });
+
+        if (existingSession) {
+            return NextResponse.json({ error: 'Ya existe una sesión abierta en esta caja' }, { status: 409 });
+        }
+
+        // Create new session
+        const [newSession] = await db
+            .insert(sesionesCaja)
+            .values({
+                cajaId: id,
+                userId,
+                montoApertura: validatedData.montoApertura.toString(),
+            })
+            .returning();
+
+        // Update caja saldo to the opening amount
+        await db
+            .update(cajas)
+            .set({ saldoActual: validatedData.montoApertura.toString() })
+            .where(eq(cajas.id, id));
+
+        return NextResponse.json(newSession, { status: 201 });
     } catch (error) {
-        if (error instanceof Error) {
-            if (error.message === 'CAJA_NOT_FOUND') {
-                return NextResponse.json({ error: 'Caja no encontrada o inactiva' }, { status: 404 });
-            }
-            if (error.message === 'SESSION_ALREADY_OPEN') {
-                return NextResponse.json({ error: 'Ya existe una sesión abierta en esta caja' }, { status: 409 });
-            }
-            if (error.name === 'ZodError') {
-                return NextResponse.json({ error: 'Validation Error', details: error }, { status: 400 });
-            }
+        if (error instanceof Error && error.name === 'ZodError') {
+            return NextResponse.json({ error: 'Validation Error', details: error }, { status: 400 });
         }
         console.error('Error opening session:', error);
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });

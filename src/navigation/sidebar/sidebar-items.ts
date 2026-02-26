@@ -15,8 +15,12 @@ import {
   ReceiptText,
   ShoppingBag,
   SquareArrowUpRight,
+  ShieldCheck,
+  Key,
   Users,
   Vault,
+  UserPlus,
+  UsersRound,
 } from "lucide-react";
 
 export interface NavSubItem {
@@ -57,33 +61,6 @@ export const sidebarItems: NavGroup[] = [
     ],
   },
   {
-    id: 2,
-    label: "Operaciones",
-    items: [
-      {
-        title: "Clientes",
-        url: "/dashboard/clients",
-        icon: Users,
-      },
-      {
-        title: "Préstamos",
-        url: "/dashboard/loans",
-        icon: Banknote,
-      },
-      {
-        title: "Pagos",
-        url: "/dashboard/payments",
-        icon: ReceiptText,
-      },
-      {
-        title: "Cajas",
-        url: "/dashboard/cajas",
-        icon: Vault,
-        isNew: true,
-      },
-    ],
-  },
-  {
     id: 3,
     label: "Analítica y Reportes",
     items: [
@@ -97,10 +74,56 @@ export const sidebarItems: NavGroup[] = [
         url: "/dashboard/reports/overdue",
         icon: Gauge,
       },
+    ],
+  },
+  {
+    id: 2,
+    label: "Operaciones",
+    items: [
       {
-        title: "Flujo de Caja",
-        url: "/dashboard/reports/cash-flow",
-        icon: Calendar,
+        title: "Cajas",
+        url: "/dashboard/cajas",
+        icon: Vault,
+        isNew: true,
+        subItems: [
+          {
+            title: "Flujo de Caja",
+            url: "/dashboard/reports/cash-flow",
+            icon: Calendar,
+          },
+          {
+            title: "Gestión de Cajas",
+            url: "/dashboard/cajas",
+            icon: Vault,
+          },
+        ],
+      },
+      {
+        title: "Clientes",
+        url: "/dashboard/clients",
+        icon: Users,
+        subItems: [
+          {
+            title: "Crear Cliente",
+            url: "/dashboard/clients/crear",
+            icon: Users,
+          },
+          {
+            title: "Listado de Clientes",
+            url: "/dashboard/clients/listado",
+            icon: Users,
+          },
+        ],
+      },
+      {
+        title: "Pagos",
+        url: "/dashboard/payments",
+        icon: ReceiptText,
+      },
+      {
+        title: "Préstamos",
+        url: "/dashboard/loans",
+        icon: Banknote,
       },
     ],
   },
@@ -111,7 +134,24 @@ export const sidebarItems: NavGroup[] = [
       {
         title: "Usuarios",
         url: "/dashboard/settings/users",
-        icon: Lock,
+        icon: Users,
+        subItems: [
+          {
+            title: "Crear Usuario",
+            url: "/dashboard/settings/users/crear",
+            icon: UserPlus,
+          },
+          {
+            title: "Roles",
+            url: "/dashboard/settings/users/roles",
+            icon: ShieldCheck,
+          },
+          {
+            title: "Permisos",
+            url: "/dashboard/settings/users/permissions",
+            icon: Key,
+          },
+        ],
       },
     ],
   },

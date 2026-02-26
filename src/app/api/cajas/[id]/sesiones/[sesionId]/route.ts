@@ -44,86 +44,76 @@ export async function PATCH(
         const json = await request.json();
         const validatedData = closeSessionSchema.parse(json);
 
-        const result = await db.transaction(async (tx) => {
-            // Get the session
-            const sesion = await tx.query.sesionesCaja.findFirst({
-                where: and(
-                    eq(sesionesCaja.id, sesionId),
-                    eq(sesionesCaja.estado, 'abierta'),
-                ),
-            });
-
-            if (!sesion) {
-                throw new Error('SESSION_NOT_FOUND_OR_CLOSED');
-            }
-
-            // Calculate expected balance:
-            // monto_apertura + SUM(ingresos + traspaso_entrada + ajuste_sobrante) - SUM(gastos + traspaso_salida + ajuste_faltante)
-            const [movementSums] = await tx
-                .select({
-                    totalIngresos: sql<string>`COALESCE(SUM(CASE WHEN tipo IN ('ingreso', 'traspaso_entrada', 'ajuste_sobrante') THEN monto ELSE 0 END), 0)`,
-                    totalGastos: sql<string>`COALESCE(SUM(CASE WHEN tipo IN ('gasto', 'traspaso_salida', 'ajuste_faltante') THEN monto ELSE 0 END), 0)`,
-                })
-                .from(movimientosCaja)
-                .where(eq(movimientosCaja.sesionId, sesionId));
-
-            const montoApertura = Number(sesion.montoApertura);
-            const totalIngresos = Number(movementSums.totalIngresos);
-            const totalGastos = Number(movementSums.totalGastos);
-            const saldoEsperado = montoApertura + totalIngresos - totalGastos;
-            const montoCierre = validatedData.montoCierre;
-            const discrepancia = montoCierre - saldoEsperado;
-
-            // Close the session
-            const [closedSession] = await tx
-                .update(sesionesCaja)
-                .set({
-                    montoCierre: montoCierre.toString(),
-                    saldoEsperado: saldoEsperado.toString(),
-                    discrepancia: discrepancia.toString(),
-                    estado: 'cerrada',
-                    closedAt: new Date(),
-                })
-                .where(eq(sesionesCaja.id, sesionId))
-                .returning();
-
-            // If there's a discrepancy, create an adjustment movement
-            if (discrepancia !== 0) {
-                await tx.insert(movimientosCaja).values({
-                    sesionId: sesionId,
-                    cajaId: id,
-                    tipo: discrepancia > 0 ? 'ajuste_sobrante' : 'ajuste_faltante',
-                    monto: Math.abs(discrepancia).toString(),
-                    concepto: discrepancia > 0
-                        ? `Ajuste por sobrante de caja: +${Math.abs(discrepancia).toFixed(2)}`
-                        : `Ajuste por faltante de caja: -${Math.abs(discrepancia).toFixed(2)}`,
-                });
-            }
-
-            // Update the caja's saldo_actual to the physical count (monto_cierre)
-            await tx
-                .update(cajas)
-                .set({ saldoActual: montoCierre.toString() })
-                .where(eq(cajas.id, id));
-
-            return {
-                ...closedSession,
-                totalIngresos,
-                totalGastos,
-                saldoEsperado,
-                discrepancia,
-            };
+        // Get the session
+        const sesion = await db.query.sesionesCaja.findFirst({
+            where: and(
+                eq(sesionesCaja.id, sesionId),
+                eq(sesionesCaja.estado, 'abierta'),
+            ),
         });
 
-        return NextResponse.json(result);
+        if (!sesion) {
+            return NextResponse.json({ error: 'Sesión no encontrada o ya cerrada' }, { status: 404 });
+        }
+
+        // Calculate expected balance
+        const [movementSums] = await db
+            .select({
+                totalIngresos: sql<string>`COALESCE(SUM(CASE WHEN tipo IN ('ingreso', 'traspaso_entrada', 'ajuste_sobrante') THEN monto ELSE 0 END), 0)`,
+                totalGastos: sql<string>`COALESCE(SUM(CASE WHEN tipo IN ('gasto', 'traspaso_salida', 'ajuste_faltante') THEN monto ELSE 0 END), 0)`,
+            })
+            .from(movimientosCaja)
+            .where(eq(movimientosCaja.sesionId, sesionId));
+
+        const montoApertura = Number(sesion.montoApertura);
+        const totalIngresos = Number(movementSums.totalIngresos);
+        const totalGastos = Number(movementSums.totalGastos);
+        const saldoEsperado = montoApertura + totalIngresos - totalGastos;
+        const montoCierre = validatedData.montoCierre;
+        const discrepancia = montoCierre - saldoEsperado;
+
+        // Close the session
+        const [closedSession] = await db
+            .update(sesionesCaja)
+            .set({
+                montoCierre: montoCierre.toString(),
+                saldoEsperado: saldoEsperado.toString(),
+                discrepancia: discrepancia.toString(),
+                estado: 'cerrada',
+                closedAt: new Date(),
+            })
+            .where(eq(sesionesCaja.id, sesionId))
+            .returning();
+
+        // If there's a discrepancy, create an adjustment movement
+        if (discrepancia !== 0) {
+            await db.insert(movimientosCaja).values({
+                sesionId: sesionId,
+                cajaId: id,
+                tipo: discrepancia > 0 ? 'ajuste_sobrante' : 'ajuste_faltante',
+                monto: Math.abs(discrepancia).toString(),
+                concepto: discrepancia > 0
+                    ? `Ajuste por sobrante de caja: +${Math.abs(discrepancia).toFixed(2)}`
+                    : `Ajuste por faltante de caja: -${Math.abs(discrepancia).toFixed(2)}`,
+            });
+        }
+
+        // Update the caja's saldo_actual to the physical count
+        await db
+            .update(cajas)
+            .set({ saldoActual: montoCierre.toString() })
+            .where(eq(cajas.id, id));
+
+        return NextResponse.json({
+            ...closedSession,
+            totalIngresos,
+            totalGastos,
+            saldoEsperado,
+            discrepancia,
+        });
     } catch (error) {
-        if (error instanceof Error) {
-            if (error.message === 'SESSION_NOT_FOUND_OR_CLOSED') {
-                return NextResponse.json({ error: 'Sesión no encontrada o ya cerrada' }, { status: 404 });
-            }
-            if (error.name === 'ZodError') {
-                return NextResponse.json({ error: 'Validation Error', details: error }, { status: 400 });
-            }
+        if (error instanceof Error && error.name === 'ZodError') {
+            return NextResponse.json({ error: 'Validation Error', details: error }, { status: 400 });
         }
         console.error('Error closing session:', error);
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });

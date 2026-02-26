@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-
+import * as React from "react";
 import { BadgeCheck, Bell, CreditCard, LogOut } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -26,15 +25,26 @@ export function AccountSwitcher({
     readonly role: string;
   }>;
 }) {
-  const [activeUser, setActiveUser] = useState(users[0]);
+  const [mounted, setMounted] = React.useState(false);
+  const [activeUser, setActiveUser] = React.useState(users[0]);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const trigger = (
+    <Avatar className="size-9 rounded-lg">
+      <AvatarImage src={activeUser.avatar || undefined} alt={activeUser.name} />
+      <AvatarFallback className="rounded-lg">{getInitials(activeUser.name)}</AvatarFallback>
+    </Avatar>
+  );
+
+  if (!mounted) return trigger;
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Avatar className="size-9 rounded-lg">
-          <AvatarImage src={activeUser.avatar || undefined} alt={activeUser.name} />
-          <AvatarFallback className="rounded-lg">{getInitials(activeUser.name)}</AvatarFallback>
-        </Avatar>
+        {trigger}
       </DropdownMenuTrigger>
       <DropdownMenuContent className="min-w-56 space-y-1 rounded-lg" side="bottom" align="end" sideOffset={4}>
         {users.map((user) => (

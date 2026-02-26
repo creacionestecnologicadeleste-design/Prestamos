@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 
-const handler = NextAuth({
+export const authOptions: any = {
     providers: [
         CredentialsProvider({
             name: "Credentials",
@@ -39,12 +39,14 @@ const handler = NextAuth({
     callbacks: {
         async jwt({ token, user }) {
             if (user) {
+                token.id = user.id;
                 token.role = (user as any).role;
             }
             return token;
         },
         async session({ session, token }) {
             if (session.user) {
+                (session.user as any).id = token.id;
                 (session.user as any).role = token.role;
             }
             return session;
@@ -54,6 +56,8 @@ const handler = NextAuth({
         signIn: "/auth/v2/login",
     },
     secret: process.env.NEXTAUTH_SECRET,
-});
+};
+
+const handler = NextAuth(authOptions);
 
 export { handler as GET, handler as POST };

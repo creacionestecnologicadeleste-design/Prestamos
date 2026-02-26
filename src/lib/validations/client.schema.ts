@@ -11,6 +11,8 @@ export const clientSchema = z.object({
     occupation: z.string().optional(),
     monthlyIncome: z.string().or(z.number()).transform((val) => Number(val)).optional(),
     status: z.enum(['active', 'blocked', 'defaulted']).default('active'),
+    imageUrl: z.string().optional().or(z.literal('')),
+    creditLimit: z.string().or(z.number()).transform((val) => Number(val)).optional(),
 });
 
 export type ClientInput = z.infer<typeof clientSchema>;

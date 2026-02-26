@@ -12,13 +12,38 @@ export const cajaTypeEnum = pgEnum('caja_type', ['principal', 'chica']);
 export const sessionStatusEnum = pgEnum('session_status', ['abierta', 'cerrada']);
 export const movementTypeEnum = pgEnum('movement_type', ['ingreso', 'gasto', 'traspaso_entrada', 'traspaso_salida', 'ajuste_sobrante', 'ajuste_faltante']);
 
+// Roles
+export const roles = pgTable('roles', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    name: varchar('name', { length: 100 }).notNull().unique(),
+    description: text('description'),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+// Permissions
+export const permissions = pgTable('permissions', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    name: varchar('name', { length: 100 }).notNull().unique(), // e.g., 'users.view', 'loans.create'
+    description: text('description'),
+    module: varchar('module', { length: 50 }).notNull(), // e.g., 'usuarios', 'prestamos', 'cajas'
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+// Role Permissions (Many-to-Many)
+export const rolePermissions = pgTable('role_permissions', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    roleId: uuid('role_id').references(() => roles.id).notNull(),
+    permissionId: uuid('permission_id').references(() => permissions.id).notNull(),
+});
+
 // Users
 export const users = pgTable('users', {
     id: uuid('id').primaryKey().defaultRandom(),
     name: varchar('name', { length: 255 }).notNull(),
     email: varchar('email', { length: 255 }).notNull().unique(),
     passwordHash: varchar('password_hash', { length: 255 }).notNull(),
-    role: userRoleEnum('role').default('analyst').notNull(),
+    roleId: uuid('role_id').references(() => roles.id),
+    imageUrl: text('image_url'),
     isActive: boolean('is_active').default(true).notNull(),
     createdAt: timestamp('created_at').defaultNow().notNull(),
 });
@@ -36,6 +61,8 @@ export const clients = pgTable('clients', {
     occupation: varchar('occupation', { length: 255 }),
     monthlyIncome: decimal('monthly_income', { precision: 12, scale: 2 }),
     status: clientStatusEnum('status').default('active').notNull(),
+    imageUrl: text('image_url'),
+    creditLimit: decimal('credit_limit', { precision: 12, scale: 2 }),
     createdBy: uuid('created_by').references(() => users.id),
     createdAt: timestamp('created_at').defaultNow().notNull(),
 });
@@ -140,7 +167,22 @@ export const movimientosCaja = pgTable('movimientos_caja', {
 });
 
 // Relations
-export const usersRelations = relations(users, ({ many }) => ({
+export const rolesRelations = relations(roles, ({ many }) => ({
+    users: many(users),
+    permissions: many(rolePermissions),
+}));
+
+export const permissionsRelations = relations(permissions, ({ many }) => ({
+    roles: many(rolePermissions),
+}));
+
+export const rolePermissionsRelations = relations(rolePermissions, ({ one }) => ({
+    role: one(roles, { fields: [rolePermissions.roleId], references: [roles.id] }),
+    permission: one(permissions, { fields: [rolePermissions.permissionId], references: [permissions.id] }),
+}));
+
+export const usersRelations = relations(users, ({ one, many }) => ({
+    role: one(roles, { fields: [users.roleId], references: [roles.id] }),
     clientsCreated: many(clients),
     loansApproved: many(loans, { relationName: 'approvedBy' }),
     loansCreated: many(loans, { relationName: 'createdBy' }),

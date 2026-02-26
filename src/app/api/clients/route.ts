@@ -23,6 +23,7 @@ export async function POST(request: Request) {
         const [newClient] = await db.insert(clients).values({
             ...validatedData,
             monthlyIncome: validatedData.monthlyIncome?.toString(),
+            creditLimit: validatedData.creditLimit?.toString(),
         }).returning();
 
         return NextResponse.json(newClient, { status: 201 });

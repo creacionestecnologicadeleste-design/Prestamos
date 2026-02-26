@@ -28,8 +28,11 @@ const searchItems = [
 ];
 
 export function SearchDialog() {
+  const [mounted, setMounted] = React.useState(false);
   const [open, setOpen] = React.useState(false);
+
   React.useEffect(() => {
+    setMounted(true);
     const down = (e: KeyboardEvent) => {
       if (e.key === "j" && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
@@ -40,19 +43,25 @@ export function SearchDialog() {
     return () => document.removeEventListener("keydown", down);
   }, []);
 
+  const trigger = (
+    <Button
+      variant="link"
+      className="!px-0 font-normal text-muted-foreground hover:no-underline"
+      onClick={() => setOpen(true)}
+    >
+      <Search className="size-4" />
+      Search
+      <kbd className="inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-medium text-[10px]">
+        <span className="text-xs">⌘</span>J
+      </kbd>
+    </Button>
+  );
+
+  if (!mounted) return trigger;
+
   return (
     <>
-      <Button
-        variant="link"
-        className="!px-0 font-normal text-muted-foreground hover:no-underline"
-        onClick={() => setOpen(true)}
-      >
-        <Search className="size-4" />
-        Search
-        <kbd className="inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-medium text-[10px]">
-          <span className="text-xs">⌘</span>J
-        </kbd>
-      </Button>
+      {trigger}
       <CommandDialog open={open} onOpenChange={setOpen}>
         <CommandInput placeholder="Search dashboards, users, and more…" />
         <CommandList>

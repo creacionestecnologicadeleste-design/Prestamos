@@ -1,5 +1,4 @@
-"use client";
-
+import * as React from "react";
 import { CircleUser, CreditCard, EllipsisVertical, LogOut, MessageSquareDot } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -24,7 +23,14 @@ export function NavUser({
     readonly avatar: string;
   };
 }) {
+  const [mounted, setMounted] = React.useState(false);
   const { isMobile } = useSidebar();
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) return null;
 
   return (
     <SidebarMenu>

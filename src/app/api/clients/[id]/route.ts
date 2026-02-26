@@ -25,7 +25,7 @@ export async function GET(
     }
 }
 
-export async function PUT(
+export async function PATCH(
     request: Request,
     { params }: { params: Promise<{ id: string }> }
 ) {
@@ -39,6 +39,7 @@ export async function PUT(
             .set({
                 ...validatedData,
                 monthlyIncome: validatedData.monthlyIncome?.toString(),
+                creditLimit: validatedData.creditLimit?.toString(),
             })
             .where(eq(clients.id, id))
             .returning();
