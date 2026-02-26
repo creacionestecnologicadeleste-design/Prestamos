@@ -594,6 +594,7 @@ export default function UserManagementPage() {
                                 <DataTable
                                     table={table}
                                     columns={columns}
+                                    isLoading={loadingUsers}
                                 />
                             </div>
                         </CardContent>

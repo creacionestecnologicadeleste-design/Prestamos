@@ -25,6 +25,7 @@ interface DataTableProps<TData, TValue> {
   table: TanStackTable<TData>;
   columns: ColumnDef<TData, TValue>[];
   dndEnabled?: boolean;
+  isLoading?: boolean;
   onReorder?: (newData: TData[]) => void;
   onRowClick?: (row: any) => void;
 }
@@ -34,14 +35,29 @@ function renderTableBody<TData, TValue>({
   columns,
   dndEnabled,
   dataIds,
+  isLoading,
   onRowClick,
 }: {
   table: TanStackTable<TData>;
   columns: ColumnDef<TData, TValue>[];
   dndEnabled: boolean;
   dataIds: UniqueIdentifier[];
+  isLoading?: boolean;
   onRowClick?: (row: any) => void;
 }) {
+  if (isLoading) {
+    return (
+      <TableRow>
+        <TableCell colSpan={columns.length} className="h-24 text-center">
+          <div className="flex items-center justify-center gap-2">
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+            Cargando datos...
+          </div>
+        </TableCell>
+      </TableRow>
+    );
+  }
+
   if (!table.getRowModel().rows.length) {
     return (
       <TableRow>
@@ -78,6 +94,7 @@ export function DataTable<TData, TValue>({
   table,
   columns,
   dndEnabled = false,
+  isLoading = false,
   onReorder,
   onRowClick,
 }: DataTableProps<TData, TValue>) {
@@ -113,7 +130,7 @@ export function DataTable<TData, TValue>({
         ))}
       </TableHeader>
       <TableBody className="**:data-[slot=table-cell]:first:w-8">
-        {renderTableBody({ table, columns, dndEnabled, dataIds, onRowClick })}
+        {renderTableBody({ table, columns, dndEnabled, dataIds, isLoading, onRowClick })}
       </TableBody>
     </Table>
   );

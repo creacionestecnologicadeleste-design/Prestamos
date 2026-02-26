@@ -261,6 +261,7 @@ export default function ListadoClientesPage() {
                         <DataTable
                             table={table}
                             columns={listColumns}
+                            isLoading={isLoading}
                             onRowClick={(row) => setSelectedClient(row.original)}
                         />
                     </div>
