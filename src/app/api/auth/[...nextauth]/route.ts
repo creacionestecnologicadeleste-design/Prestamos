@@ -1,10 +1,10 @@
-import NextAuth from "next-auth";
+import NextAuth, { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 
-export const authOptions: any = {
+export const authOptions: NextAuthOptions = {
     providers: [
         CredentialsProvider({
             name: "Credentials",
@@ -30,7 +30,7 @@ export const authOptions: any = {
                         email: user.email,
                         image: user.imageUrl,
                         role: user.roleId,
-                    };
+                    } as any;
                 }
 
                 return null;
@@ -38,18 +38,18 @@ export const authOptions: any = {
         }),
     ],
     callbacks: {
-        async jwt({ token, user }) {
+        async jwt({ token, user }: { token: any; user?: any }) {
             if (user) {
                 token.id = user.id;
-                token.role = (user as any).role;
-                token.image = (user as any).image;
+                token.role = user.role;
+                token.image = user.image;
             }
             return token;
         },
-        async session({ session, token }) {
+        async session({ session, token }: { session: any; token: any }) {
             if (session.user) {
-                (session.user as any).id = token.id;
-                (session.user as any).role = token.role;
+                session.user.id = token.id;
+                session.user.role = token.role;
                 session.user.image = token.image as string;
             }
             return session;
