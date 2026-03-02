@@ -108,10 +108,15 @@ const updated = fileContent.replace(
 );
 
 async function main() {
-  const formatted = execFileSync("npx", ["@biomejs/biome", "format", "--stdin-file-path", outputPath], {
-    input: updated,
-    encoding: "utf8",
-  });
+  const formatted = execFileSync(
+    process.platform === "win32" ? "npx.cmd" : "npx",
+    ["@biomejs/biome", "format", "--stdin-file-path", outputPath],
+    {
+      input: updated,
+      encoding: "utf8",
+      shell: true,
+    },
+  );
 
   if (formatted === fileContent) {
     console.log("ℹ️  No changes in theme.ts");
