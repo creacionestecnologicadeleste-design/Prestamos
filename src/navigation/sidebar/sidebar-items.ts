@@ -3,6 +3,7 @@ import {
   Calendar,
   ChartBar,
   Fingerprint,
+  PlusCircle,
   Forklift,
   Gauge,
   GraduationCap,
@@ -119,11 +120,57 @@ export const sidebarItems: NavGroup[] = [
         title: "Pagos",
         url: "/dashboard/payments",
         icon: ReceiptText,
+        subItems: [
+          {
+            title: "Registro de Pagos",
+            url: "/dashboard/payments/registrar",
+            icon: ReceiptText,
+          },
+          {
+            title: "Historial de Pagos",
+            url: "/dashboard/payments/historial",
+            icon: ReceiptText,
+          }
+        ]
+      },
+      {
+        title: "Cobranzas",
+        url: "/dashboard/collections",
+        icon: ReceiptText,
+        subItems: [
+          {
+            title: "Cuotas Vencidas",
+            url: "/dashboard/collections/overdue",
+            icon: ReceiptText,
+          },
+          {
+            title: "Intereses por Mora",
+            url: "/dashboard/collections/penalties",
+            icon: ReceiptText,
+          }
+        ]
       },
       {
         title: "Préstamos",
         url: "/dashboard/loans",
         icon: Banknote,
+        subItems: [
+          {
+            title: "Nueva Solicitud",
+            url: "/dashboard/loans/solicitud",
+            icon: PlusCircle,
+          },
+          {
+            title: "Listado de Préstamos",
+            url: "/dashboard/loans/listado",
+            icon: ReceiptText,
+          },
+          {
+            title: "Tipos de Préstamo",
+            url: "/dashboard/loans/tipos",
+            icon: Fingerprint,
+          },
+        ],
       },
     ],
   },

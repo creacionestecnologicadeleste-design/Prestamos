@@ -173,13 +173,13 @@ export default function ListadoClientesPage() {
                                     className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                                     onClick={(e) => {
                                         e.stopPropagation();
-                                        setSelectedClient(row.original);
+                                        window.location.href = `/dashboard/clients/${row.original.id}`;
                                     }}
                                 >
                                     <Eye className="h-4 w-4" />
                                 </Button>
                             </TooltipTrigger>
-                            <TooltipContent>Ver Detalles</TooltipContent>
+                            <TooltipContent>Ver Perfil Completo</TooltipContent>
                         </Tooltip>
 
                         <Tooltip>

@@ -11,6 +11,20 @@ export const paymentMethodEnum = pgEnum('payment_method', ['cash', 'transfer', '
 export const cajaTypeEnum = pgEnum('caja_type', ['principal', 'chica']);
 export const sessionStatusEnum = pgEnum('session_status', ['abierta', 'cerrada']);
 export const movementTypeEnum = pgEnum('movement_type', ['ingreso', 'gasto', 'traspaso_entrada', 'traspaso_salida', 'ajuste_sobrante', 'ajuste_faltante']);
+export const loanFrequencyEnum = pgEnum('loan_frequency', ['weekly', 'biweekly', 'monthly']);
+
+// Loan Types (e.g., Personal, Mortgage, Vehicle)
+export const loanTypes = pgTable('loan_types', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    name: varchar('name', { length: 100 }).notNull().unique(),
+    description: text('description'),
+    interestRateDefault: decimal('interest_rate_default', { precision: 5, scale: 2 }).notNull(),
+    maxAmount: decimal('max_amount', { precision: 12, scale: 2 }),
+    maxTermMonths: integer('max_term_months'),
+    paymentFrequency: loanFrequencyEnum('payment_frequency').default('monthly').notNull(),
+    isActive: boolean('is_active').default(true).notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+});
 
 // Roles
 export const roles = pgTable('roles', {
@@ -76,11 +90,13 @@ export const loans = pgTable('loans', {
     approvedAmount: decimal('approved_amount', { precision: 12, scale: 2 }),
     interestRate: decimal('interest_rate', { precision: 5, scale: 2 }).notNull(),
     termMonths: integer('term_months').notNull(),
+    paymentFrequency: loanFrequencyEnum('payment_frequency').default('monthly').notNull(),
     method: loanMethodEnum('method').default('french').notNull(),
     purpose: text('purpose'),
     status: loanStatusEnum('status').default('pending').notNull(),
     disbursementDate: date('disbursement_date'),
     firstPaymentDate: date('first_payment_date'),
+    loanTypeId: uuid('loan_type_id').references(() => loanTypes.id),
     approvedBy: uuid('approved_by').references(() => users.id),
     createdBy: uuid('created_by').references(() => users.id),
     createdAt: timestamp('created_at').defaultNow().notNull(),
@@ -198,11 +214,16 @@ export const clientsRelations = relations(clients, ({ one, many }) => ({
 
 export const loansRelations = relations(loans, ({ one, many }) => ({
     client: one(clients, { fields: [loans.clientId], references: [clients.id] }),
+    loanType: one(loanTypes, { fields: [loans.loanTypeId], references: [loanTypes.id] }),
     approvedBy: one(users, { fields: [loans.approvedBy], references: [users.id], relationName: 'approvedBy' }),
     createdBy: one(users, { fields: [loans.createdBy], references: [users.id], relationName: 'createdBy' }),
     schedule: many(amortizationSchedule),
     payments: many(payments),
     penalties: many(penalties),
+}));
+
+export const loanTypesRelations = relations(loanTypes, ({ many }) => ({
+    loans: many(loans),
 }));
 
 export const amortizationScheduleRelations = relations(amortizationSchedule, ({ one, many }) => ({

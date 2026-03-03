@@ -3,12 +3,12 @@ import packageJson from "../../package.json";
 const currentYear = new Date().getFullYear();
 
 export const APP_CONFIG = {
-  name: "Tecnologica Del Este",
+  name: "Inversiones J&T",
   version: packageJson.version,
-  copyright: `© ${currentYear}, Desarrollado por: Tecnologica Del Este.`,
+  copyright: `© ${currentYear}, Desarrollado por: Inversiones J&T.`,
   meta: {
-    title: "Tecnologica Del Este - Modern Next.js Dashboard Starter Template",
+    title: "Inversiones J&T - Gestión de Préstamos y Operaciones Financieras",
     description:
-      "Tecnologica Del Este is a modern dashboard for managing loans and financial operations.",
+      "Inversiones J&T es una plataforma moderna para la gestión de préstamos y operaciones financieras.",
   },
 };

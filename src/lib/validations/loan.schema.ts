@@ -1,17 +1,32 @@
-import { z } from 'zod';
+import { z } from "zod";
 
-export const loanSchema = z.object({
-    clientId: z.string().uuid('ID de cliente inválido'),
-    loanNumber: z.string().min(1, 'Número de préstamo es requerido'),
-    amount: z.string().or(z.number()).transform((val) => Number(val)),
-    approvedAmount: z.string().or(z.number()).transform((val) => Number(val)).optional(),
-    interestRate: z.string().or(z.number()).transform((val) => Number(val)),
-    termMonths: z.number().int().positive(),
-    method: z.enum(['french', 'german']).default('french'),
-    purpose: z.string().optional(),
-    status: z.enum(['pending', 'approved', 'active', 'paid', 'rejected', 'defaulted']).default('pending'),
-    disbursementDate: z.string().optional(), // YYYY-MM-DD
-    firstPaymentDate: z.string().optional(), // YYYY-MM-DD
+export const loanTypeSchema = z.object({
+    name: z.string().min(2, "El nombre es requerido"),
+    description: z.string().optional(),
+    interestRateDefault: z.number().min(0, "La tasa de interés debe ser positiva"),
+    maxAmount: z.number().optional().nullable(),
+    maxTermMonths: z.number().int().optional().nullable(),
+    paymentFrequency: z.enum(["weekly", "biweekly", "monthly"]).default("monthly"),
 });
 
-export type LoanInput = z.infer<typeof loanSchema>;
+export const loanApplicationSchema = z.object({
+    clientId: z.string().uuid("Seleccione un cliente válido"),
+    loanTypeId: z.string().uuid("Seleccione un tipo de préstamo válido"),
+    amount: z.number().min(1, "El monto debe ser mayor a 0"),
+    interestRate: z.number().min(0, "La tasa de interés debe ser positiva"),
+    termMonths: z.number().int().min(1, "El plazo debe ser de al menos 1 mes"),
+    method: z.enum(["french", "german"]),
+    paymentFrequency: z.enum(["weekly", "biweekly", "monthly"]),
+    purpose: z.string().optional(),
+    firstPaymentDate: z.string().optional(),
+});
+
+export const loanApprovalSchema = z.object({
+    status: z.enum(["approved", "rejected"]),
+    approvedAmount: z.number().optional(),
+    disbursementDate: z.string().optional(),
+});
+export const loanUpdateSchema = z.object({
+    purpose: z.string().optional(),
+    loanNumber: z.string().optional(),
+});

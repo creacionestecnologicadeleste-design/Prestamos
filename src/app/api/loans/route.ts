@@ -1,77 +1,75 @@
-import { NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { loans, amortizationSchedule } from '@/lib/db/schema';
-import { loanSchema } from '@/lib/validations/loan.schema';
-import { calculateFrenchAmortization, calculateGermanAmortization } from '@/lib/calculations/amortization';
+import { NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { loans, amortizationSchedule } from "@/lib/db/schema";
+import { loanApplicationSchema } from "@/lib/validations/loan.schema";
+import { calculateAmortization } from "@/lib/utils/amortization";
+import { desc } from "drizzle-orm";
 
 export async function GET() {
     try {
         const allLoans = await db.query.loans.findMany({
             with: {
                 client: true,
+                loanType: true,
             },
-            orderBy: (loans, { desc }) => [desc(loans.createdAt)],
+            orderBy: [desc(loans.createdAt)],
         });
         return NextResponse.json(allLoans);
     } catch (error) {
-        console.error('Error fetching loans:', error);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+        console.error("[LOANS_GET]", error);
+        return new NextResponse("Internal Error", { status: 500 });
     }
 }
 
-export async function POST(request: Request) {
+export async function POST(req: Request) {
     try {
-        const json = await request.json();
-        const validatedData = loanSchema.parse(json);
+        const json = await req.json();
+        const body = loanApplicationSchema.parse(json);
 
-        const result = await db.transaction(async (tx) => {
-            // 1. Create the loan
-            const [newLoan] = await tx.insert(loans).values({
-                ...validatedData,
-                amount: validatedData.amount.toString(),
-                approvedAmount: validatedData.approvedAmount?.toString(),
-                interestRate: validatedData.interestRate.toString(),
-            }).returning();
+        // Generate a unique loan number (simple implementation)
+        const loanNumber = `PRE-${Date.now().toString().slice(-8)}`;
 
-            // 2. Generate amortization schedule if active or approved with dates
-            if (
-                (validatedData.status === 'active' || validatedData.status === 'approved') &&
-                validatedData.firstPaymentDate
-            ) {
-                const params = {
-                    amount: validatedData.approvedAmount || validatedData.amount,
-                    annualInterestRate: validatedData.interestRate,
-                    termMonths: validatedData.termMonths,
-                    startDate: new Date(validatedData.firstPaymentDate),
-                };
+        const [newLoan] = await db.insert(loans).values({
+            clientId: body.clientId,
+            loanTypeId: body.loanTypeId,
+            loanNumber,
+            amount: body.amount.toString(),
+            interestRate: body.interestRate.toString(),
+            termMonths: body.termMonths,
+            paymentFrequency: body.paymentFrequency,
+            method: body.method,
+            purpose: body.purpose,
+            status: "pending",
+        }).returning();
 
-                const schedule = validatedData.method === 'german'
-                    ? calculateGermanAmortization(params)
-                    : calculateFrenchAmortization(params);
+        // Generate initial amortization schedule
+        const schedule = calculateAmortization(
+            body.amount,
+            body.interestRate,
+            body.termMonths,
+            body.method,
+            body.firstPaymentDate ? new Date(body.firstPaymentDate) : new Date(),
+            body.paymentFrequency
+        );
 
-                await tx.insert(amortizationSchedule).values(
-                    schedule.map((row) => ({
-                        loanId: newLoan.id,
-                        installmentNumber: row.installmentNumber,
-                        dueDate: row.dueDate.toISOString().split('T')[0],
-                        principalAmount: row.principalAmount.toString(),
-                        interestAmount: row.interestAmount.toString(),
-                        totalAmount: row.totalAmount.toString(),
-                        remainingBalance: row.remainingBalance.toString(),
-                        status: 'pending' as const,
-                    }))
-                );
-            }
-
-            return newLoan;
-        });
-
-        return NextResponse.json(result, { status: 201 });
-    } catch (error) {
-        if (error instanceof Error && error.name === 'ZodError') {
-            return NextResponse.json({ error: 'Validation Error', details: error }, { status: 400 });
+        if (schedule.length > 0) {
+            await db.insert(amortizationSchedule).values(
+                schedule.map((row) => ({
+                    loanId: newLoan.id,
+                    installmentNumber: row.installmentNumber,
+                    dueDate: row.dueDate.toISOString().split('T')[0],
+                    principalAmount: row.principalAmount.toString(),
+                    interestAmount: row.interestAmount.toString(),
+                    totalAmount: row.totalAmount.toString(),
+                    remainingBalance: row.remainingBalance.toString(),
+                    status: "pending" as const,
+                }))
+            );
         }
-        console.error('Error creating loan:', error);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+
+        return NextResponse.json(newLoan);
+    } catch (error) {
+        console.error("[LOANS_POST]", error);
+        return new NextResponse("Internal Error", { status: 500 });
     }
 }

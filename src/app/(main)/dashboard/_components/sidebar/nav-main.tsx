@@ -39,14 +39,22 @@ const IsComingSoon = () => (
 const NavItemExpanded = ({
   item,
   isActive,
-  isSubmenuOpen,
+  isOpen,
+  onToggle,
 }: {
   item: NavMainItem;
   isActive: (url: string, subItems?: NavMainItem["subItems"]) => boolean;
-  isSubmenuOpen: (subItems?: NavMainItem["subItems"]) => boolean;
+  isOpen: boolean;
+  onToggle: () => void;
 }) => {
   return (
-    <Collapsible key={item.title} asChild defaultOpen={isSubmenuOpen(item.subItems)} className="group/collapsible">
+    <Collapsible
+      key={item.title}
+      asChild
+      open={isOpen}
+      onOpenChange={onToggle}
+      className="group/collapsible"
+    >
       <SidebarMenuItem>
         <CollapsibleTrigger asChild>
           {item.subItems ? (
@@ -54,11 +62,16 @@ const NavItemExpanded = ({
               disabled={item.comingSoon}
               isActive={isActive(item.url, item.subItems)}
               tooltip={item.title}
+              onClick={(e) => {
+                // Prevent default so we just toggle the accordion without navigating to # or similar on the parent
+                // if parent doesn't have a distinct URL.
+                if (!item.url || item.url === '#') e.preventDefault();
+              }}
             >
               {item.icon && <item.icon />}
               <span>{item.title}</span>
               {item.comingSoon && <IsComingSoon />}
-              <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+              <ChevronRight className={`ml-auto transition-transform duration-200 ${isOpen ? "rotate-90" : ""}`} />
             </SidebarMenuButton>
           ) : (
             <SidebarMenuButton
@@ -146,10 +159,23 @@ export function NavMain({ items }: NavMainProps) {
   const path = usePathname();
   const { state, isMobile } = useSidebar();
   const [mounted, setMounted] = React.useState(false);
+  const [openItem, setOpenItem] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     setMounted(true);
-  }, []);
+    // On mount or path change, if nothing is manually opened yet, 
+    // find the group that contains the current path and open it.
+    if (!openItem) {
+      for (const group of items) {
+        for (const item of group.items) {
+          if (item.subItems?.some(sub => path.startsWith(sub.url))) {
+            setOpenItem(item.title);
+            return;
+          }
+        }
+      }
+    }
+  }, [path, items, openItem]);
 
   if (!mounted) {
     return null;
@@ -160,10 +186,6 @@ export function NavMain({ items }: NavMainProps) {
       return subItems.some((sub) => path.startsWith(sub.url));
     }
     return path === url;
-  };
-
-  const isSubmenuOpen = (subItems?: NavMainItem["subItems"]) => {
-    return subItems?.some((sub) => path.startsWith(sub.url)) ?? false;
   };
 
   return (
@@ -199,7 +221,13 @@ export function NavMain({ items }: NavMainProps) {
                 }
                 // Expanded view
                 return (
-                  <NavItemExpanded key={item.title} item={item} isActive={isItemActive} isSubmenuOpen={isSubmenuOpen} />
+                  <NavItemExpanded
+                    key={item.title}
+                    item={item}
+                    isActive={isItemActive}
+                    isOpen={openItem === item.title}
+                    onToggle={() => setOpenItem(openItem === item.title ? null : item.title)}
+                  />
                 );
               })}
             </SidebarMenu>

@@ -1,55 +1,68 @@
-import { NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { loans, amortizationSchedule } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { loans } from "@/lib/db/schema";
+import { loanApprovalSchema, loanUpdateSchema } from "@/lib/validations/loan.schema";
+import { eq } from "drizzle-orm";
 
-export async function GET(
-    request: Request,
+export async function PATCH(
+    req: Request,
     { params }: { params: Promise<{ id: string }> }
 ) {
-    const { id } = await params;
     try {
+        const { id } = await params;
+        const json = await req.json();
+
+        // Check if it's an approval or a general update
+        const isApproval = json.status === "approved" || json.status === "rejected";
+
+        if (isApproval) {
+            const body = loanApprovalSchema.parse(json);
+            const [updatedLoan] = await db.update(loans)
+                .set({
+                    status: body.status,
+                    approvedAmount: body.approvedAmount?.toString(),
+                    disbursementDate: body.disbursementDate,
+                })
+                .where(eq(loans.id, id))
+                .returning();
+            return NextResponse.json(updatedLoan);
+        } else {
+            const body = loanUpdateSchema.parse(json);
+            const [updatedLoan] = await db.update(loans)
+                .set({
+                    purpose: body.purpose,
+                    loanNumber: body.loanNumber,
+                })
+                .where(eq(loans.id, id))
+                .returning();
+            return NextResponse.json(updatedLoan);
+        }
+    } catch (error) {
+        console.error("[LOAN_PATCH]", error);
+        return new NextResponse("Internal Error", { status: 500 });
+    }
+}
+
+export async function GET(
+    req: Request,
+    { params }: { params: Promise<{ id: string }> }
+) {
+    try {
+        const { id } = await params;
         const loan = await db.query.loans.findFirst({
             where: eq(loans.id, id),
             with: {
                 client: true,
-                schedule: {
-                    orderBy: (schedule, { asc }) => [asc(schedule.installmentNumber)],
-                },
+                loanType: true,
+                schedule: true,
             },
         });
 
-        if (!loan) {
-            return NextResponse.json({ error: 'Loan not found' }, { status: 404 });
-        }
+        if (!loan) return new NextResponse("Not Found", { status: 404 });
 
         return NextResponse.json(loan);
     } catch (error) {
-        console.error('Error fetching loan:', error);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
-    }
-}
-
-export async function DELETE(
-    request: Request,
-    { params }: { params: Promise<{ id: string }> }
-) {
-    const { id } = await params;
-    try {
-        const result = await db.transaction(async (tx) => {
-            // Delete schedule first due to FK constraints if not using cascade
-            await tx.delete(amortizationSchedule).where(eq(amortizationSchedule.loanId, id));
-            const [deletedLoan] = await tx.delete(loans).where(eq(loans.id, id)).returning();
-            return deletedLoan;
-        });
-
-        if (!result) {
-            return NextResponse.json({ error: 'Loan not found' }, { status: 404 });
-        }
-
-        return NextResponse.json({ message: 'Loan and its schedule deleted successfully' });
-    } catch (error) {
-        console.error('Error deleting loan:', error);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+        console.error("[LOAN_GET_BY_ID]", error);
+        return new NextResponse("Internal Error", { status: 500 });
     }
 }

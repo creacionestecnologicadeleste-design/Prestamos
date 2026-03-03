@@ -61,7 +61,8 @@ interface Role {
 
 export default function RolesPage() {
     const queryClient = useQueryClient();
-    const [isCreateOpen, setIsCreateOpen] = useState(false);
+    const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [editingRole, setEditingRole] = useState<Role | null>(null);
     const [newRoleName, setNewRoleName] = useState("");
     const [newRoleDesc, setNewRoleDesc] = useState("");
     const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
@@ -96,12 +97,71 @@ export default function RolesPage() {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["roles"] });
             toast.success("Rol creado exitosamente");
-            setIsCreateOpen(false);
-            setNewRoleName("");
-            setNewRoleDesc("");
-            setSelectedPermissions([]);
+            closeDialog();
         },
     });
+
+    const updateRoleMutation = useMutation({
+        mutationFn: async () => {
+            if (!editingRole) return;
+            const { data } = await axios.patch(`/api/roles/${editingRole.id}`, {
+                name: newRoleName,
+                description: newRoleDesc,
+                permissionIds: selectedPermissions,
+            });
+            return data;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["roles"] });
+            toast.success("Rol actualizado exitosamente");
+            closeDialog();
+        },
+    });
+
+    const deleteRoleMutation = useMutation({
+        mutationFn: async (roleId: string) => {
+            const { data } = await axios.delete(`/api/roles/${roleId}`);
+            return data;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["roles"] });
+            toast.success("Rol eliminado exitosamente");
+        },
+        onError: (error: any) => {
+            const message = error.response?.data || "Error al eliminar el rol";
+            toast.error(message);
+        }
+    });
+
+    const openCreateDialog = () => {
+        setEditingRole(null);
+        setNewRoleName("");
+        setNewRoleDesc("");
+        setSelectedPermissions([]);
+        setIsDialogOpen(true);
+    };
+
+    const openEditDialog = (role: Role) => {
+        setEditingRole(role);
+        setNewRoleName(role.name);
+        setNewRoleDesc(role.description || "");
+        setSelectedPermissions(role.permissions.map(p => p.permission.id));
+        setIsDialogOpen(true);
+    };
+
+    const closeDialog = () => {
+        setIsDialogOpen(false);
+        setEditingRole(null);
+        setNewRoleName("");
+        setNewRoleDesc("");
+        setSelectedPermissions([]);
+    };
+
+    const handleDelete = (role: Role) => {
+        if (confirm(`¿Está seguro de que desea eliminar el rol "${role.name}"?`)) {
+            deleteRoleMutation.mutate(role.id);
+        }
+    };
 
     const togglePermission = (pId: string) => {
         setSelectedPermissions(prev =>
@@ -112,7 +172,10 @@ export default function RolesPage() {
     return (
         <div className="flex flex-col gap-6 p-6 max-w-6xl mx-auto">
             <div className="flex flex-col gap-2">
-                <h1 className="text-3xl font-bold tracking-tight">Roles y Seguridad</h1>
+                <div className="flex items-center gap-2">
+                    <ShieldCheck className="h-8 w-8 text-primary" />
+                    <h1 className="text-3xl font-bold tracking-tight">Roles y Seguridad</h1>
+                </div>
                 <p className="text-muted-foreground">
                     Define los niveles de acceso y permisos para cada tipo de usuario.
                 </p>
@@ -122,41 +185,60 @@ export default function RolesPage() {
                 <Card className="md:col-span-1 border-none shadow-md bg-card/50 backdrop-blur-sm h-fit">
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
-                            <ShieldCheck className="h-5 w-5 text-primary" />
+                            <Settings2 className="h-5 w-5 text-primary" />
                             Roles Disponibles
                         </CardTitle>
-                        <CardDescription>Seleccione un rol para ver detalles o cree uno nuevo.</CardDescription>
+                        <CardDescription>Gestione los roles y sus permisos específicos.</CardDescription>
                     </CardHeader>
                     <CardContent className="flex flex-col gap-4">
                         {roles.map((role) => (
-                            <Button
+                            <div
                                 key={role.id}
-                                variant="outline"
-                                className="justify-between h-auto py-3 px-4 hover:bg-accent/50 group"
+                                className="flex items-center justify-between p-4 rounded-lg border bg-background hover:bg-accent/50 transition-colors group"
                             >
-                                <div className="flex flex-col items-start gap-1">
-                                    <span className="font-semibold">{role.name}</span>
-                                    <span className="text-xs text-muted-foreground truncate max-w-[150px]">
-                                        {role.description}
+                                <div className="flex flex-col items-start gap-1 overflow-hidden">
+                                    <div className="flex items-center gap-2">
+                                        <span className="font-semibold truncate">{role.name}</span>
+                                        <Badge variant="secondary" className="text-[10px] px-1.5 h-4">
+                                            {role.permissions.length}
+                                        </Badge>
+                                    </div>
+                                    <span className="text-xs text-muted-foreground truncate w-full">
+                                        {role.description || "Sin descripción"}
                                     </span>
                                 </div>
-                                <Badge variant="secondary" className="group-hover:bg-primary group-hover:text-primary-foreground">
-                                    {role.permissions.length}
-                                </Badge>
-                            </Button>
+                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10"
+                                        onClick={() => openEditDialog(role)}
+                                    >
+                                        <Settings2 className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                        onClick={() => handleDelete(role)}
+                                    >
+                                        <ShieldAlert className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                            </div>
                         ))}
 
-                        <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-                            <DialogTrigger asChild>
-                                <Button className="w-full mt-4 flex items-center gap-2">
-                                    <Plus className="h-4 w-4" /> Nuevo Rol
-                                </Button>
-                            </DialogTrigger>
+                        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                            <Button onClick={openCreateDialog} className="w-full mt-4 flex items-center gap-2">
+                                <Plus className="h-4 w-4" /> Nuevo Rol
+                            </Button>
                             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                                 <DialogHeader>
-                                    <DialogTitle>Crear Nuevo Rol</DialogTitle>
+                                    <DialogTitle>{editingRole ? "Editar Rol" : "Crear Nuevo Rol"}</DialogTitle>
                                     <DialogDescription>
-                                        Asigne un nombre y seleccione los permisos para este nuevo rol.
+                                        {editingRole
+                                            ? "Modifique los detalles y permisos del rol seleccionado."
+                                            : "Asigne un nombre y seleccione los permisos para este nuevo rol."}
                                     </DialogDescription>
                                 </DialogHeader>
                                 <div className="grid gap-6 py-4">
@@ -180,33 +262,43 @@ export default function RolesPage() {
                                     </div>
 
                                     <div className="grid gap-2">
-                                        <Label>Permisos del Sistema</Label>
-                                        <Accordion type="multiple" className="w-full">
+                                        <div className="flex items-center justify-between">
+                                            <Label>Permisos del Sistema</Label>
+                                            <Badge variant="outline" className="text-[10px]">
+                                                {selectedPermissions.length} seleccionados
+                                            </Badge>
+                                        </div>
+                                        <Accordion type="multiple" className="w-full border rounded-lg overflow-hidden">
                                             {modules.map((module) => (
-                                                <AccordionItem value={module} key={module}>
-                                                    <AccordionTrigger className="capitalize py-3">
+                                                <AccordionItem value={module} key={module} className="border-b last:border-0 px-4">
+                                                    <AccordionTrigger className="capitalize py-3 hover:no-underline">
                                                         <span className="flex items-center gap-2 text-sm font-medium">
-                                                            <Settings2 className="h-4 w-4 text-primary" />
+                                                            <div className="w-2 h-2 rounded-full bg-primary" />
                                                             Módulo: {module}
                                                         </span>
                                                     </AccordionTrigger>
                                                     <AccordionContent>
-                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
+                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pb-4">
                                                             {permissions.filter(p => p.module === module).map(p => (
-                                                                <div key={p.id} className="flex items-start space-x-2 border rounded-lg p-2.5 hover:bg-accent/30 transition-colors">
+                                                                <div
+                                                                    key={p.id}
+                                                                    className={`flex items-start space-x-2 border rounded-lg p-3 transition-colors cursor-pointer hover:bg-accent/30 ${selectedPermissions.includes(p.id) ? 'border-primary bg-primary/5' : ''
+                                                                        }`}
+                                                                    onClick={() => togglePermission(p.id)}
+                                                                >
                                                                     <Checkbox
                                                                         id={p.id}
                                                                         checked={selectedPermissions.includes(p.id)}
-                                                                        onCheckedChange={() => togglePermission(p.id)}
+                                                                        onCheckedChange={() => { }} // Controlled by div click
                                                                     />
-                                                                    <div className="grid gap-1.5 leading-none cursor-pointer" onClick={() => togglePermission(p.id)}>
+                                                                    <div className="grid gap-1.5 leading-none">
                                                                         <label
                                                                             htmlFor={p.id}
-                                                                            className="text-xs font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                                                            className="text-xs font-semibold leading-none cursor-pointer"
                                                                         >
                                                                             {p.description}
                                                                         </label>
-                                                                        <span className="text-[10px] text-muted-foreground uppercase">{p.name}</span>
+                                                                        <span className="text-[10px] text-muted-foreground uppercase font-mono">{p.name}</span>
                                                                     </div>
                                                                 </div>
                                                             ))}
@@ -218,12 +310,12 @@ export default function RolesPage() {
                                     </div>
                                 </div>
                                 <DialogFooter>
-                                    <Button variant="outline" onClick={() => setIsCreateOpen(false)}>Cancelar</Button>
+                                    <Button variant="outline" onClick={closeDialog}>Cancelar</Button>
                                     <Button
-                                        onClick={() => createRoleMutation.mutate()}
-                                        disabled={createRoleMutation.isPending || !newRoleName}
+                                        onClick={() => editingRole ? updateRoleMutation.mutate() : createRoleMutation.mutate()}
+                                        disabled={createRoleMutation.isPending || updateRoleMutation.isPending || !newRoleName}
                                     >
-                                        Crear Rol
+                                        {editingRole ? "Guardar Cambios" : "Crear Rol"}
                                     </Button>
                                 </DialogFooter>
                             </DialogContent>
