@@ -18,9 +18,6 @@ export const metadata: Metadata = {
   description: APP_CONFIG.meta.description,
 };
 
-import { Analytics } from "@vercel/analytics/react";
-import { SpeedInsights } from "@vercel/speed-insights/next";
-
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   const { theme_mode, theme_preset, content_layout, navbar_style, sidebar_variant, sidebar_collapsible, font } =
     PREFERENCE_DEFAULTS;
@@ -55,8 +52,6 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
             </PreferencesStoreProvider>
           </QueryProvider>
         </AuthProvider>
-        <Analytics />
-        <SpeedInsights />
       </body>
     </html>
   );
