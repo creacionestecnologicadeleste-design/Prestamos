@@ -26,7 +26,7 @@ export async function POST(req: Request) {
         const json = await req.json();
         const body = createUserSchema.parse(json);
 
-        const { name, email, password, roleId } = body;
+        const { name, email, password, roleId, imageUrl } = body;
 
         // Check if user exists
         const existingUser = await db.query.users.findFirst({
@@ -44,6 +44,7 @@ export async function POST(req: Request) {
             email,
             passwordHash: hashedPassword,
             roleId,
+            imageUrl,
         }).returning();
 
         return NextResponse.json(newUser[0]);

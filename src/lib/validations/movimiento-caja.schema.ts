@@ -8,6 +8,7 @@ export const movimientoSchema = z.object({
         .transform((val) => Number(val))
         .refine((val) => val > 0, 'El monto debe ser mayor a 0'),
     concepto: z.string().min(1, 'El concepto es requerido').max(500),
+    categoryId: z.string().uuid().optional().nullable(),
     referencia: z.string().max(100).optional(),
 });
 

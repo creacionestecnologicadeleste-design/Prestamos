@@ -23,6 +23,8 @@ import {
     Image as ImageIcon,
     Camera,
     Upload,
+    Ban,
+    CheckCircle2,
 } from "lucide-react";
 import { useState, useMemo, useEffect, useRef } from "react";
 import { format } from "date-fns";
@@ -349,10 +351,10 @@ export default function UserManagementPage() {
                                         toggleStatusMutation.mutate({ userId: row.original.id, isActive: row.original.isActive });
                                     }}
                                 >
-                                    {row.original.isActive ? <UserMinus className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
+                                    {row.original.isActive ? <Ban className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
                                 </Button>
                             </TooltipTrigger>
-                            <TooltipContent>{row.original.isActive ? 'Desactivar' : 'Activar'}</TooltipContent>
+                            <TooltipContent>{row.original.isActive ? 'Deshabilitar Usuario' : 'Habilitar Usuario'}</TooltipContent>
                         </Tooltip>
 
                         <Tooltip>

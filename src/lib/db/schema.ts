@@ -5,10 +5,10 @@ import { relations } from 'drizzle-orm';
 export const userRoleEnum = pgEnum('user_role', ['admin', 'analyst', 'cashier']);
 export const clientStatusEnum = pgEnum('client_status', ['active', 'blocked', 'defaulted']);
 export const loanMethodEnum = pgEnum('loan_method', ['french', 'german']);
-export const loanStatusEnum = pgEnum('loan_status', ['pending', 'approved', 'active', 'paid', 'rejected', 'defaulted']);
+export const loanStatusEnum = pgEnum('loan_status', ['pending', 'approved', 'active', 'paid', 'rejected', 'defaulted', 'annulled']);
 export const scheduleStatusEnum = pgEnum('schedule_status', ['pending', 'paid', 'overdue', 'partial']);
 export const paymentMethodEnum = pgEnum('payment_method', ['cash', 'transfer', 'card']);
-export const cajaTypeEnum = pgEnum('caja_type', ['principal', 'chica']);
+export const cajaTypeEnum = pgEnum('caja_type', ['principal', 'chica', 'bancaria']);
 export const sessionStatusEnum = pgEnum('session_status', ['abierta', 'cerrada']);
 export const movementTypeEnum = pgEnum('movement_type', ['ingreso', 'gasto', 'traspaso_entrada', 'traspaso_salida', 'ajuste_sobrante', 'ajuste_faltante']);
 export const loanFrequencyEnum = pgEnum('loan_frequency', ['weekly', 'biweekly', 'monthly']);
@@ -143,14 +143,41 @@ export const penalties = pgTable('penalties', {
     createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
+// Categorías de Cuentas (Efectivo, Bancos, etc)
+export const accountCategories = pgTable('account_categories', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    nombre: varchar('nombre', { length: 100 }).notNull().unique(),
+    descripcion: text('description'),
+    icon: varchar('icon', { length: 50 }),
+    isActive: boolean('is_active').default(true).notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+// Categorías de Transacción / Conceptos (Luz, Alquiler, etc)
+export const transactionCategories = pgTable('transaction_categories', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    nombre: varchar('nombre', { length: 100 }).notNull(),
+    tipo: movementTypeEnum('tipo').notNull(),
+    descripcion: text('description'),
+    isActive: boolean('is_active').default(true).notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
 // Cajas
 export const cajas = pgTable('cajas', {
     id: uuid('id').primaryKey().defaultRandom(),
     nombre: varchar('nombre', { length: 255 }).notNull(),
     tipo: cajaTypeEnum('tipo').notNull(),
+    categoryId: uuid('category_id').references(() => accountCategories.id),
     saldoActual: decimal('saldo_actual', { precision: 12, scale: 2 }).default('0').notNull(),
     cuentaContable: varchar('cuenta_contable', { length: 100 }),
     limiteMaximo: decimal('limite_maximo', { precision: 12, scale: 2 }),
+
+    // Banco fields
+    bankName: varchar('bank_name', { length: 100 }),
+    accountNumber: varchar('account_number', { length: 100 }),
+    accountType: varchar('account_type', { length: 50 }), // Ahorros, Corriente
+
     isActive: boolean('is_active').default(true).notNull(),
     createdAt: timestamp('created_at').defaultNow().notNull(),
 });
@@ -174,6 +201,7 @@ export const movimientosCaja = pgTable('movimientos_caja', {
     id: uuid('id').primaryKey().defaultRandom(),
     sesionId: uuid('sesion_id').references(() => sesionesCaja.id).notNull(),
     cajaId: uuid('caja_id').references(() => cajas.id).notNull(),
+    categoryId: uuid('category_id').references(() => transactionCategories.id),
     tipo: movementTypeEnum('tipo').notNull(),
     monto: decimal('monto', { precision: 12, scale: 2 }).notNull(),
     concepto: varchar('concepto', { length: 500 }).notNull(),
@@ -243,11 +271,6 @@ export const penaltiesRelations = relations(penalties, ({ one }) => ({
     schedule: one(amortizationSchedule, { fields: [penalties.scheduleId], references: [amortizationSchedule.id] }),
 }));
 
-// Cajas Relations
-export const cajasRelations = relations(cajas, ({ many }) => ({
-    sesiones: many(sesionesCaja),
-    movimientos: many(movimientosCaja),
-}));
 
 export const sesionesCajaRelations = relations(sesionesCaja, ({ one, many }) => ({
     caja: one(cajas, { fields: [sesionesCaja.cajaId], references: [cajas.id] }),
@@ -258,5 +281,20 @@ export const sesionesCajaRelations = relations(sesionesCaja, ({ one, many }) => 
 export const movimientosCajaRelations = relations(movimientosCaja, ({ one }) => ({
     sesion: one(sesionesCaja, { fields: [movimientosCaja.sesionId], references: [sesionesCaja.id] }),
     caja: one(cajas, { fields: [movimientosCaja.cajaId], references: [cajas.id] }),
+    category: one(transactionCategories, { fields: [movimientosCaja.categoryId], references: [transactionCategories.id] }),
     creator: one(users, { fields: [movimientosCaja.createdBy], references: [users.id] }),
+}));
+
+export const accountCategoriesRelations = relations(accountCategories, ({ many }) => ({
+    accounts: many(cajas),
+}));
+
+export const transactionCategoriesRelations = relations(transactionCategories, ({ many }) => ({
+    movements: many(movimientosCaja),
+}));
+
+export const cajasRelations = relations(cajas, ({ one, many }) => ({
+    category: one(accountCategories, { fields: [cajas.categoryId], references: [accountCategories.id] }),
+    sesiones: many(sesionesCaja),
+    movimientos: many(movimientosCaja),
 }));

@@ -155,18 +155,38 @@ const NavItemCollapsed = ({
   );
 };
 
-export function NavMain({ items }: NavMainProps) {
+export function NavMain({ items, userPermissions = [] }: NavMainProps & { userPermissions?: string[] }) {
   const path = usePathname();
   const { state, isMobile } = useSidebar();
   const [mounted, setMounted] = React.useState(false);
   const [openItem, setOpenItem] = React.useState<string | null>(null);
+
+  // Helper to check if user has permission
+  const hasPermission = (required?: string) => {
+    if (!required) return true;
+    return userPermissions.includes(required);
+  };
+
+  // Filter groups and items
+  const filteredItems = items.map(group => ({
+    ...group,
+    items: group.items.filter(item => {
+      // Keep if item has permission OR if any subItem has permission
+      const itemHasPerm = hasPermission(item.requiredPermission);
+      const someSubHasPerm = item.subItems?.some(sub => hasPermission(sub.requiredPermission));
+      return itemHasPerm || someSubHasPerm;
+    }).map(item => ({
+      ...item,
+      subItems: item.subItems?.filter(sub => hasPermission(sub.requiredPermission))
+    }))
+  })).filter(group => group.items.length > 0);
 
   React.useEffect(() => {
     setMounted(true);
     // On mount or path change, if nothing is manually opened yet, 
     // find the group that contains the current path and open it.
     if (!openItem) {
-      for (const group of items) {
+      for (const group of filteredItems) {
         for (const item of group.items) {
           if (item.subItems?.some(sub => path.startsWith(sub.url))) {
             setOpenItem(item.title);
@@ -175,7 +195,7 @@ export function NavMain({ items }: NavMainProps) {
         }
       }
     }
-  }, [path, items, openItem]);
+  }, [path, filteredItems, openItem]);
 
   if (!mounted) {
     return null;
@@ -190,8 +210,7 @@ export function NavMain({ items }: NavMainProps) {
 
   return (
     <>
-
-      {items.map((group) => (
+      {filteredItems.map((group) => (
         <SidebarGroup key={group.id}>
           {group.label && <SidebarGroupLabel>{group.label}</SidebarGroupLabel>}
           <SidebarGroupContent className="flex flex-col gap-2">

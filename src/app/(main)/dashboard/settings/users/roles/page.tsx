@@ -289,7 +289,7 @@ export default function RolesPage() {
                                                                     <Checkbox
                                                                         id={p.id}
                                                                         checked={selectedPermissions.includes(p.id)}
-                                                                        onCheckedChange={() => { }} // Controlled by div click
+                                                                        onCheckedChange={() => togglePermission(p.id)}
                                                                     />
                                                                     <div className="grid gap-1.5 leading-none">
                                                                         <label

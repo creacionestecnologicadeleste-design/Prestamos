@@ -1,0 +1,8 @@
+--- USER ROLE DUMP ---
+
+USER: Daniel Beras S. (admin@test.com)
+  Role: Desarrollador (f7a2f0e6-5bc5-44af-b8c5-b37113edbb80)
+
+USER: Usuario de Prueba (admin@testt.com)
+  Role: Administrador (5fc456bd-67e5-497d-bee9-0c499503c1b8)
+

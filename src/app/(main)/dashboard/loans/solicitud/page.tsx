@@ -12,7 +12,8 @@ import {
     ArrowRight,
     Fingerprint,
     CheckCircle2,
-    Info
+    Info,
+    HelpCircle
 } from "lucide-react";
 import { useState, useMemo } from "react";
 import { toast } from "sonner";
@@ -43,6 +44,12 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { calculateAmortization } from "@/lib/utils/amortization";
 import { Badge } from "@/components/ui/badge";
 
@@ -223,7 +230,7 @@ export default function LoanApplicationPage() {
                                 </Label>
                                 <Input
                                     type="number"
-                                    value={termMonths}
+                                    value={termMonths || ""}
                                     onChange={(e) => setTermMonths(Number(e.target.value))}
                                     className="bg-background/50"
                                 />
@@ -243,16 +250,36 @@ export default function LoanApplicationPage() {
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 gap-6">
                             <div className="grid gap-2">
-                                <Label>Método de Pago</Label>
+                                <Label className="flex items-center gap-2">
+                                    Método de Pago
+                                    <TooltipProvider>
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help hover:text-primary transition-colors" />
+                                            </TooltipTrigger>
+                                            <TooltipContent side="right" className="max-w-[300px] p-3 text-xs leading-relaxed text-left">
+                                                <p className="font-bold mb-1">Definiciones de Métodos:</p>
+                                                <ul className="space-y-2 list-disc pl-4">
+                                                    <li>
+                                                        <span className="font-bold">Francés (Cuota Fija):</span> El monto total de la cuota es el mismo durante todo el préstamo. Al principio pagas más interés y poco capital.
+                                                    </li>
+                                                    <li>
+                                                        <span className="font-bold">Alemán (Capital Fijo):</span> El monto abonado al capital es constante, pero el total de la cuota disminuye con el tiempo a medida que bajan los intereses.
+                                                    </li>
+                                                </ul>
+                                            </TooltipContent>
+                                        </Tooltip>
+                                    </TooltipProvider>
+                                </Label>
                                 <Select onValueChange={(v: any) => setMethod(v)} value={method}>
-                                    <SelectTrigger className="bg-background/50">
+                                    <SelectTrigger className="bg-background/50 border-primary/20">
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="french">Francés (Fijo)</SelectItem>
-                                        <SelectItem value="german">Alemán (Variable)</SelectItem>
+                                        <SelectItem value="french">Francés (Cuota Fijo)</SelectItem>
+                                        <SelectItem value="german">Alemán (Cuota Variable)</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>

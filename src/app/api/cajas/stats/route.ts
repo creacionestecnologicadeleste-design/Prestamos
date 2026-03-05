@@ -53,6 +53,9 @@ export async function GET(request: Request) {
         });
     } catch (error) {
         console.error('Error fetching caja stats:', error);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+        if (error instanceof Error) {
+            console.error('Stack:', error.stack);
+        }
+        return NextResponse.json({ error: 'Internal Server Error', details: error instanceof Error ? error.message : String(error) }, { status: 500 });
     }
 }

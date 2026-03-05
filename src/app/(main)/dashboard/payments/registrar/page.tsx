@@ -11,8 +11,9 @@ import {
     Calendar,
     Loader2
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import { useSearchParams } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -48,6 +49,9 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 
 export default function RegisterPaymentPage() {
+    const searchParams = useSearchParams();
+    const loanIdParam = searchParams.get("loanId");
+
     const queryClient = useQueryClient();
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedLoan, setSelectedLoan] = useState<any>(null);
@@ -60,6 +64,16 @@ export default function RegisterPaymentPage() {
             return data.loans || [];
         },
     });
+
+    useEffect(() => {
+        if (loanIdParam && loans.length > 0 && !selectedLoan) {
+            const loan = loans.find((l: any) => l.id === loanIdParam);
+            if (loan) {
+                setSelectedLoan(loan);
+                setIsPaymentOpen(true);
+            }
+        }
+    }, [loanIdParam, loans, selectedLoan]);
 
     const paymentMutation = useMutation({
         mutationFn: async (payload: any) => {

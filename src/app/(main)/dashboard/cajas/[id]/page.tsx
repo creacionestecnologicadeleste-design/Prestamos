@@ -61,6 +61,8 @@ interface Movimiento {
     monto: string;
     concepto: string;
     referencia: string | null;
+    categoryId: string | null;
+    category?: { id: string; nombre: string; icon: string | null } | null;
     createdAt: string;
     creator?: { name: string } | null;
 }
@@ -119,8 +121,17 @@ export default function CajaDetailPage() {
     const [montoCierre, setMontoCierre] = useState("");
     const [movTipo, setMovTipo] = useState<"ingreso" | "gasto">("ingreso");
     const [movMonto, setMovMonto] = useState("");
+    const [movCategoryId, setMovCategoryId] = useState("");
     const [movConcepto, setMovConcepto] = useState("");
     const [movReferencia, setMovReferencia] = useState("");
+
+    const { data: categories } = useQuery<any[]>({
+        queryKey: ["transaction-categories"],
+        queryFn: async () => {
+            const { data } = await axios.get("/api/transaction-categories");
+            return data;
+        },
+    });
 
     const { data: caja, isLoading } = useQuery<CajaDetail>({
         queryKey: ["caja", id],
@@ -167,6 +178,7 @@ export default function CajaDetailPage() {
             tipo: string;
             monto: string;
             concepto: string;
+            categoryId?: string;
             referencia?: string;
         }) => {
             const { data } = await axios.post(
@@ -181,6 +193,7 @@ export default function CajaDetailPage() {
             queryClient.invalidateQueries({ queryKey: ["cajas-stats"] });
             setMovOpen(false);
             setMovMonto("");
+            setMovCategoryId("");
             setMovConcepto("");
             setMovReferencia("");
         },
@@ -198,6 +211,7 @@ export default function CajaDetailPage() {
         movMutation.mutate({
             tipo: movTipo,
             monto: movMonto,
+            categoryId: movCategoryId || undefined,
             concepto: movConcepto,
             referencia: movReferencia || undefined,
         });
@@ -303,13 +317,40 @@ export default function CajaDetailPage() {
                                             />
                                         </div>
                                         <div className="grid gap-2">
-                                            <Label>Concepto</Label>
-                                            <Input
-                                                placeholder="Ej: Venta de papelería"
-                                                value={movConcepto}
-                                                onChange={(e) => setMovConcepto(e.target.value)}
-                                            />
+                                            <Label>Concepto / Categoría</Label>
+                                            <Select
+                                                value={movCategoryId}
+                                                onValueChange={(v) => {
+                                                    setMovCategoryId(v);
+                                                    const cat = categories?.find(c => c.id === v);
+                                                    if (cat) setMovConcepto(cat.nombre);
+                                                }}
+                                            >
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Seleccionar concepto" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {categories
+                                                        ?.filter(c => c.tipo === movTipo)
+                                                        .map(cat => (
+                                                            <SelectItem key={cat.id} value={cat.id}>
+                                                                {cat.nombre}
+                                                            </SelectItem>
+                                                        ))}
+                                                    <SelectItem value="manual">Otro (especificar manual)</SelectItem>
+                                                </SelectContent>
+                                            </Select>
                                         </div>
+                                        {movCategoryId === "manual" && (
+                                            <div className="grid gap-2">
+                                                <Label>Descripción Manual</Label>
+                                                <Input
+                                                    placeholder="Ej: Ajuste por redondeo"
+                                                    value={movConcepto}
+                                                    onChange={(e) => setMovConcepto(e.target.value)}
+                                                />
+                                            </div>
+                                        )}
                                         <div className="grid gap-2">
                                             <Label>Referencia (opcional)</Label>
                                             <Input
@@ -597,7 +638,12 @@ export default function CajaDetailPage() {
                                                     </div>
                                                 </TableCell>
                                                 <TableCell className="font-medium">
-                                                    {mov.concepto}
+                                                    <div className="flex flex-col">
+                                                        <span>{mov.concepto}</span>
+                                                        {mov.category && (
+                                                            <span className="text-[10px] text-muted-foreground uppercase">{mov.category.nombre}</span>
+                                                        )}
+                                                    </div>
                                                 </TableCell>
                                                 <TableCell className="text-muted-foreground">
                                                     {mov.referencia || "—"}

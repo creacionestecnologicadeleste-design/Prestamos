@@ -16,6 +16,7 @@ import {
     Edit,
     Trash2,
     Eye,
+    ReceiptText as AmortizationIcon
 } from "lucide-react";
 import { useState } from "react";
 
@@ -48,6 +49,7 @@ import {
     TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { ClientForm } from "../client-form";
+import { AmortizationTableDialog } from "../../_components/amortization-table-dialog";
 
 interface ClientFull {
     id: string;
@@ -82,6 +84,8 @@ const STATUS_MAP: Record<string, { label: string; variant: "default" | "secondar
 export default function ListadoClientesPage() {
     const [selectedClient, setSelectedClient] = useState<ClientFull | null>(null);
     const [editingClient, setEditingClient] = useState<ClientFull | null>(null);
+    const [selectedLoanId, setSelectedLoanId] = useState<string | null>(null);
+    const [isAmortizationOpen, setIsAmortizationOpen] = useState(false);
 
     const { data: clients, isLoading } = useQuery<ClientFull[]>({
         queryKey: ["clients"],
@@ -162,64 +166,91 @@ export default function ListadoClientesPage() {
         {
             id: "actions",
             header: "Acciones",
-            cell: ({ row }) => (
-                <div className="flex items-center gap-1">
-                    <TooltipProvider>
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        window.location.href = `/dashboard/clients/${row.original.id}`;
-                                    }}
-                                >
-                                    <Eye className="h-4 w-4" />
-                                </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>Ver Perfil Completo</TooltipContent>
-                        </Tooltip>
+            cell: ({ row }) => {
+                const client = row.original;
+                const latestLoan = client.loans && client.loans.length > 0
+                    ? client.loans[0] // Assumed sorted or just pick first
+                    : null;
 
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        setEditingClient(row.original);
-                                    }}
-                                >
-                                    <Edit className="h-4 w-4" />
-                                </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>Editar Cliente</TooltipContent>
-                        </Tooltip>
+                return (
+                    <div className="flex items-center gap-1">
+                        <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            window.location.href = `/dashboard/clients/${row.original.id}`;
+                                        }}
+                                    >
+                                        <Eye className="h-4 w-4" />
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Ver Perfil Completo</TooltipContent>
+                            </Tooltip>
 
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8 text-rose-600 hover:text-rose-700 hover:bg-rose-50"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        if (confirm(`¿Está seguro de desactivar a ${row.original.firstName}?`)) {
-                                            deleteClientMutation.mutate(row.original.id);
-                                        }
-                                    }}
-                                >
-                                    <Trash2 className="h-4 w-4" />
-                                </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>Desactivar Cliente</TooltipContent>
-                        </Tooltip>
-                    </TooltipProvider>
-                </div>
-            ),
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setEditingClient(row.original);
+                                        }}
+                                    >
+                                        <Edit className="h-4 w-4" />
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Editar Cliente</TooltipContent>
+                            </Tooltip>
+
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8 text-rose-600 hover:text-rose-700 hover:bg-rose-50"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            if (confirm(`¿Está seguro de desactivar a ${row.original.firstName}?`)) {
+                                                deleteClientMutation.mutate(row.original.id);
+                                            }
+                                        }}
+                                    >
+                                        <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Desactivar Cliente</TooltipContent>
+                            </Tooltip>
+
+                            {latestLoan && (
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-8 w-8 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setSelectedLoanId(latestLoan.id);
+                                                setIsAmortizationOpen(true);
+                                            }}
+                                        >
+                                            <AmortizationIcon className="h-4 w-4" />
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Ver Amortización</TooltipContent>
+                                </Tooltip>
+                            )}
+                        </TooltipProvider>
+                    </div>
+                )
+            },
         },
     ];
 
@@ -416,6 +447,12 @@ export default function ListadoClientesPage() {
                     )}
                 </DialogContent>
             </Dialog>
+
+            <AmortizationTableDialog
+                loanId={selectedLoanId}
+                open={isAmortizationOpen}
+                onOpenChange={setIsAmortizationOpen}
+            />
         </div>
     );
 }

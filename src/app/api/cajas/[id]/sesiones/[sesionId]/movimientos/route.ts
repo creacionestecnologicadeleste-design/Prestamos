@@ -63,6 +63,7 @@ export async function POST(
                 tipo: validatedData.tipo,
                 monto: validatedData.monto.toString(),
                 concepto: validatedData.concepto,
+                categoryId: validatedData.categoryId,
                 referencia: validatedData.referencia,
                 createdBy: userId,
             })

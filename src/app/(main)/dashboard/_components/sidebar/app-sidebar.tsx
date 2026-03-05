@@ -3,8 +3,10 @@
 import * as React from "react";
 import Link from "next/link";
 
-import { CircleHelp, ClipboardList, Command, Database, File, Search, Settings } from "lucide-react";
+import { CircleHelp, ClipboardList, Command, Database, File, Search, Settings, Building2 } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
+import { useQuery } from "@tanstack/react-query";
+import axios from "axios";
 
 import {
   Sidebar,
@@ -59,7 +61,7 @@ const _data = {
   ],
 };
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+export function AppSidebar({ userPermissions, ...props }: React.ComponentProps<typeof Sidebar> & { userPermissions?: string[] }) {
   const [mounted, setMounted] = React.useState(false);
   const { sidebarVariant, sidebarCollapsible, isSynced } = usePreferencesStore(
     useShallow((s) => ({
@@ -75,6 +77,40 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   const variant = isSynced ? sidebarVariant : props.variant;
   const collapsible = isSynced ? sidebarCollapsible : props.collapsible;
+
+  const { data: bankAccounts } = useQuery({
+    queryKey: ["sidebar-banks"],
+    queryFn: async () => {
+      const { data } = await axios.get("/api/bancos");
+      return data;
+    },
+  });
+
+  const enrichedSidebarItems = React.useMemo(() => {
+    return sidebarItems.map((group) => ({
+      ...group,
+      items: group.items.map((item) => {
+        if (item.title === "Bancos") {
+          return {
+            ...item,
+            subItems: [
+              {
+                title: "Resumen de Bancos",
+                url: "/dashboard/bancos",
+                icon: Building2,
+              },
+              ...(bankAccounts || []).map((bank: any) => ({
+                title: bank.nombre,
+                url: `/dashboard/bancos/${bank.id}`,
+                icon: Building2,
+              })),
+            ],
+          };
+        }
+        return item;
+      }),
+    }));
+  }, [bankAccounts]);
 
   if (!mounted) {
     return <Sidebar {...props} variant={variant} collapsible={collapsible} />;
@@ -95,7 +131,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={sidebarItems} />
+        <NavMain items={enrichedSidebarItems} userPermissions={userPermissions} />
         {/* <NavDocuments items={data.documents} /> */}
         {/* <NavSecondary items={data.navSecondary} className="mt-auto" /> */}
       </SidebarContent>

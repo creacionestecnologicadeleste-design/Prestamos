@@ -1,0 +1,57 @@
+--- DATABASE PERMISSION DUMP ---
+
+ROLE: Analista (7d837bb9-ce85-4969-903e-904b04148134)
+  No permissions found.
+
+ROLE: Cajero (42594d8b-6fcc-4127-aea1-57aa05b57808)
+  No permissions found.
+
+ROLE: Desarrollador (f7a2f0e6-5bc5-44af-b8c5-b37113edbb80)
+  - Dashboard: dashboard.view
+  - Reportes: reports.portfolio
+  - Reportes: reports.overdue
+  - Reportes: reports.cashflow
+  - Cajas: cajas.view
+  - Cajas: cajas.manage
+  - Cajas: cajas.movements
+  - Clientes: clients.view
+  - Clientes: clients.create
+  - Clientes: clients.edit
+  - Clientes: clients.delete
+  - Pagos: payments.register
+  - Pagos: payments.history
+  - Cobranzas: collections.view
+  - Cobranzas: collections.manage
+  - Préstamos: loans.view
+  - Préstamos: loans.create
+  - Préstamos: loans.approve
+  - Préstamos: loans.disburse
+  - Préstamos: loans.annul
+  - Préstamos: loans.types.manage
+  - Configuración: users.view
+  - Configuración: users.manage
+  - Configuración: roles.manage
+
+ROLE: Administrador (5fc456bd-67e5-497d-bee9-0c499503c1b8)
+  - Dashboard: dashboard.view
+  - Reportes: reports.portfolio
+  - Reportes: reports.overdue
+  - Reportes: reports.cashflow
+  - Clientes: clients.view
+  - Clientes: clients.create
+  - Clientes: clients.edit
+  - Clientes: clients.delete
+  - Pagos: payments.register
+  - Pagos: payments.history
+  - Cobranzas: collections.view
+  - Cobranzas: collections.manage
+  - Préstamos: loans.view
+  - Préstamos: loans.create
+  - Préstamos: loans.approve
+  - Préstamos: loans.disburse
+  - Préstamos: loans.annul
+  - Préstamos: loans.types.manage
+  - Configuración: users.view
+  - Configuración: users.manage
+  - Configuración: roles.manage
+

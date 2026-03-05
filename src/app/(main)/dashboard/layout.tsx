@@ -13,6 +13,11 @@ import { AccountSwitcher } from "./_components/sidebar/account-switcher";
 import { LayoutControls } from "./_components/sidebar/layout-controls";
 import { SearchDialog } from "./_components/sidebar/search-dialog";
 import { ThemeSwitcher } from "./_components/sidebar/theme-switcher";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { db } from "@/lib/db";
+import { rolePermissions, permissions as permissionsTable } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
 
 export default async function Layout({ children }: Readonly<{ children: ReactNode }>) {
   const cookieStore = await cookies();
@@ -22,9 +27,28 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
     getPreference("sidebar_collapsible", SIDEBAR_COLLAPSIBLE_VALUES, "icon"),
   ]);
 
+  const session = await getServerSession(authOptions);
+  let userPermissions: string[] = [];
+
+  if (session?.user?.role) {
+    const roleId = session.user.role as string;
+    const perms = await db
+      .select({
+        name: permissionsTable.name
+      })
+      .from(rolePermissions)
+      .innerJoin(
+        permissionsTable,
+        eq(rolePermissions.permissionId, permissionsTable.id)
+      )
+      .where(eq(rolePermissions.roleId, roleId));
+
+    userPermissions = perms.map(p => p.name);
+  }
+
   return (
     <SidebarProvider defaultOpen={defaultOpen}>
-      <AppSidebar variant={variant} collapsible={collapsible} />
+      <AppSidebar variant={variant} collapsible={collapsible} userPermissions={userPermissions} />
       <SidebarInset
         className={cn(
           "[html[data-content-layout=centered]_&]:mx-auto! [html[data-content-layout=centered]_&]:max-w-screen-2xl!",

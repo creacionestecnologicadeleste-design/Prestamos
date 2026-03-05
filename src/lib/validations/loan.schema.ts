@@ -22,7 +22,7 @@ export const loanApplicationSchema = z.object({
 });
 
 export const loanApprovalSchema = z.object({
-    status: z.enum(["approved", "rejected"]),
+    status: z.enum(["approved", "rejected", "annulled"]),
     approvedAmount: z.number().optional(),
     disbursementDate: z.string().optional(),
 });

@@ -19,10 +19,12 @@ import {
     Clock,
     AlertCircle,
     CreditCard,
-    Edit
+    Edit,
+    ReceiptText as AmortizationIcon
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -56,13 +58,26 @@ import {
 } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { AmortizationTableDialog } from "../../_components/amortization-table-dialog";
+import { LoanDetailsDialog } from "../../_components/loan-details-dialog";
 
 interface Loan {
     id: string;
     loanNumber: string;
     amount: string;
     interestRate: string;
-    status: "pending" | "approved" | "active" | "paid" | "rejected";
+    status: "pending" | "approved" | "active" | "paid" | "rejected" | "annulled";
     createdAt: string;
     purpose?: string;
     client: {
@@ -76,15 +91,21 @@ interface Loan {
 
 const statusMap = {
     pending: { label: "Pendiente", color: "bg-amber-500/10 text-amber-600 border-amber-500/20" },
-    approved: { label: "Aprobado", color: "bg-blue-500/10 text-blue-600 border-blue-500/20" },
+    approved: { label: "Aprobado", color: "bg-sky-500/10 text-sky-600 border-sky-500/20" },
     active: { label: "Activo", color: "bg-green-500/10 text-green-600 border-green-500/20" },
-    paid: { label: "Pagado", color: "bg-slate-500/10 text-slate-600 border-slate-500/20" },
-    rejected: { label: "Rechazado", color: "bg-red-500/10 text-red-600 border-red-500/20" },
+    paid: { label: "Pagado", color: "bg-blue-500/10 text-blue-600 border-blue-500/20" },
+    rejected: { label: "Rechazado", color: "bg-orange-500/10 text-orange-600 border-orange-500/20" },
+    annulled: { label: "Anulado", color: "bg-red-500/10 text-red-600 border-red-500/20" },
 };
 
 export default function LoanListPage() {
+    const router = useRouter();
     const queryClient = useQueryClient();
     const [searchTerm, setSearchTerm] = useState("");
+    const [selectedLoanId, setSelectedLoanId] = useState<string | null>(null);
+    const [selectedLoan, setSelectedLoan] = useState<Loan | null>(null);
+    const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+    const [isAmortizationOpen, setIsAmortizationOpen] = useState(false);
 
     const { data: loans = [], isLoading } = useQuery<Loan[]>({
         queryKey: ["loans"],
@@ -109,8 +130,10 @@ export default function LoanListPage() {
     });
 
     const filteredLoans = loans.filter(loan =>
-        loan.loanNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        `${loan.client.firstName} ${loan.client.lastName}`.toLowerCase().includes(searchTerm.toLowerCase())
+        loan.status === "active" && (
+            loan.loanNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            `${loan.client.firstName} ${loan.client.lastName}`.toLowerCase().includes(searchTerm.toLowerCase())
+        )
     );
 
     const totalPortfolio = loans.filter(l => l.status === "active" || l.status === "approved").reduce((acc, curr) => acc + Number(curr.amount), 0);
@@ -123,8 +146,8 @@ export default function LoanListPage() {
             <div className="flex flex-col gap-8 p-6 max-w-7xl mx-auto animate-in fade-in duration-500">
                 <div className="flex justify-between items-center">
                     <div>
-                        <h1 className="text-3xl font-bold tracking-tight">Listado de Préstamos</h1>
-                        <p className="text-muted-foreground italic">Gestión integral de cartera y nuevas solicitudes.</p>
+                        <h1 className="text-3xl font-bold tracking-tight">Préstamos Activos</h1>
+                        <p className="text-muted-foreground italic">Gestión integral de cartera operativa y nuevas solicitudes.</p>
                     </div>
                 </div>
 
@@ -257,7 +280,7 @@ export default function LoanListPage() {
                                                 </div>
                                             </TableCell>
                                             <TableCell>
-                                                <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <div className="flex items-center justify-center gap-1">
                                                     <Tooltip>
                                                         <TooltipTrigger asChild>
                                                             <Button
@@ -303,6 +326,42 @@ export default function LoanListPage() {
                                                         </>
                                                     )}
 
+                                                    {(loan.status === "pending" || loan.status === "approved" || loan.status === "active") && (
+                                                        <AlertDialog>
+                                                            <Tooltip>
+                                                                <TooltipTrigger asChild>
+                                                                    <AlertDialogTrigger asChild>
+                                                                        <Button
+                                                                            variant="ghost"
+                                                                            size="icon"
+                                                                            className="h-8 w-8 text-gray-400 hover:text-red-500 hover:bg-red-50"
+                                                                        >
+                                                                            <XCircle className="h-4 w-4" />
+                                                                        </Button>
+                                                                    </AlertDialogTrigger>
+                                                                </TooltipTrigger>
+                                                                <TooltipContent>Anular Préstamo</TooltipContent>
+                                                            </Tooltip>
+                                                            <AlertDialogContent>
+                                                                <AlertDialogHeader>
+                                                                    <AlertDialogTitle>¿Está completamente seguro?</AlertDialogTitle>
+                                                                    <AlertDialogDescription>
+                                                                        Esta acción anulará el préstamo seleccionado. Esta acción no se puede deshacer y el préstamo quedará inhabilitado permanentemente.
+                                                                    </AlertDialogDescription>
+                                                                </AlertDialogHeader>
+                                                                <AlertDialogFooter>
+                                                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                                    <AlertDialogAction
+                                                                        onClick={() => updateStatusMutation.mutate({ id: loan.id, status: "annulled" })}
+                                                                        className="bg-red-600 hover:bg-red-700"
+                                                                    >
+                                                                        Anular Préstamo
+                                                                    </AlertDialogAction>
+                                                                </AlertDialogFooter>
+                                                            </AlertDialogContent>
+                                                        </AlertDialog>
+                                                    )}
+
                                                     {(loan.status === "approved" || loan.status === "active") && (
                                                         <Tooltip>
                                                             <TooltipTrigger asChild>
@@ -310,11 +369,28 @@ export default function LoanListPage() {
                                                                     variant="ghost"
                                                                     size="icon"
                                                                     className="h-8 w-8 text-green-600 hover:bg-green-50"
+                                                                    onClick={() => router.push(`/dashboard/payments/registrar?loanId=${loan.id}`)}
                                                                 >
                                                                     <CreditCard className="h-4 w-4" />
                                                                 </Button>
                                                             </TooltipTrigger>
                                                             <TooltipContent>Ir a Cobros</TooltipContent>
+                                                        </Tooltip>
+                                                    )}
+
+                                                    {loan.status === "active" && (
+                                                        <Tooltip>
+                                                            <TooltipTrigger asChild>
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    className="h-8 w-8 text-blue-500 hover:bg-blue-50"
+                                                                    onClick={() => updateStatusMutation.mutate({ id: loan.id, status: "paid" })}
+                                                                >
+                                                                    <CheckCircle2 className="h-4 w-4" />
+                                                                </Button>
+                                                            </TooltipTrigger>
+                                                            <TooltipContent>Marcar como Pagado</TooltipContent>
                                                         </Tooltip>
                                                     )}
 
@@ -330,6 +406,23 @@ export default function LoanListPage() {
                                                         </TooltipTrigger>
                                                         <TooltipContent>Editar</TooltipContent>
                                                     </Tooltip>
+
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="h-8 w-8 text-indigo-600 hover:bg-indigo-50"
+                                                                onClick={() => {
+                                                                    setSelectedLoanId(loan.id);
+                                                                    setIsAmortizationOpen(true);
+                                                                }}
+                                                            >
+                                                                <AmortizationIcon className="h-4 w-4" />
+                                                            </Button>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent>Ver Amortización</TooltipContent>
+                                                    </Tooltip>
                                                 </div>
                                             </TableCell>
                                         </TableRow>
@@ -339,6 +432,18 @@ export default function LoanListPage() {
                         </Table>
                     </CardContent>
                 </Card>
+
+                <AmortizationTableDialog
+                    loanId={selectedLoanId}
+                    open={isAmortizationOpen}
+                    onOpenChange={setIsAmortizationOpen}
+                />
+
+                <LoanDetailsDialog
+                    loan={selectedLoan}
+                    open={isDetailsOpen}
+                    onOpenChange={setIsDetailsOpen}
+                />
             </div>
         </TooltipProvider>
     );

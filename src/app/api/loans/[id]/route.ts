@@ -13,7 +13,7 @@ export async function PATCH(
         const json = await req.json();
 
         // Check if it's an approval or a general update
-        const isApproval = json.status === "approved" || json.status === "rejected";
+        const isApproval = json.status === "approved" || json.status === "rejected" || json.status === "annulled";
 
         if (isApproval) {
             const body = loanApprovalSchema.parse(json);
